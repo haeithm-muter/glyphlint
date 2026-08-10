@@ -84,11 +84,14 @@ export function textNode(text: string, overrides: NodeOverrides = {}): TextNodeS
     ownLang: null,
     inheritedLang: null,
     ownDir: null,
+    inheritedDir: null,
     computedDirection: 'ltr',
     ancestorHasDirRtl: false,
     classNames: [],
     tagName: 'P',
     hasBdiAncestor: false,
+    hasCodeAncestor: false,
+    hasTransformedAncestor: false,
     // Chromium's UA stylesheet puts `unicode-bidi: isolate` on block elements, so this is the
     // value a rule meets on an ordinary paragraph — not `normal`.
     unicodeBidi: 'isolate',
@@ -106,7 +109,7 @@ export function textNode(text: string, overrides: NodeOverrides = {}): TextNodeS
 /** A snapshot wrapping the given nodes, with plausible page-level values around them. */
 export function snapshotOf(nodes: TextNodeSnapshot[]): DomSnapshot {
   return {
-    snapshotVersion: 2,
+    snapshotVersion: 3,
     url: 'http://127.0.0.1/test',
     finalUrl: 'http://127.0.0.1/test',
     capturedAt: '2026-08-10T00:00:00.000Z',
@@ -141,15 +144,25 @@ export const SAMPLES = {
   nko: 'ߒߞߏ',
   mongolian: 'ᠮᠣᠩᠭᠣᠯ',
   hebrew: 'שלום',
+  hebrewLong: 'שלום עולם ספר שלום עולם ספר',
+  // A Latin run sandwiched between Arabic runs and followed by a full stop. The full stop is the
+  // point: it is directionally neutral, so the bidirectional algorithm has to choose a side for it.
+  arabicWithLatinAndPunctuation: 'مرحبا السلام Acme Corp. كتاب مرحبا',
+  // The same shape without any neutral character beside the Latin run. This one renders correctly
+  // and must never be reported.
+  arabicWithBareLatin: 'مرحبا السلام Acme كتاب مرحبا',
   thai: 'สวัสดี',
   thaiLong: 'สวัสดี ภาษาไทย ขอบคุณ สวัสดี ภาษาไทย ขอบคุณ',
   devanagari: 'नमस्ते',
   han: '你好',
+  hanLong: '中文 你好 汉字 中文 你好 汉字 中文 你好 汉字 中文 你好 汉字',
   hangul: '안녕하세요',
   greek: 'Ελληνικά',
   cyrillic: 'Привет',
   latin: 'Hello world',
+  latinLong: 'Hello world Bonjour Hello world Bonjour',
   vietnamese: 'Tiếng Việt xin chào',
+  vietnameseLong: 'Tiếng Việt xin chào Tiếng Việt xin chào',
   digits: '2024 15%',
   bengali: 'বাংলা',
 } as const;

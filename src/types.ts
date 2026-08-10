@@ -161,6 +161,15 @@ export interface TextNodeSnapshot {
   /** The `lang` in force from the nearest ancestor that declared one. */
   inheritedLang: string | null;
   ownDir: string | null;
+  /**
+   * The `dir` in force from the nearest ancestor that declared one, whatever its value.
+   *
+   * Distinct from `ancestorHasDirRtl`, which sees only `rtl`. The difference decides a real false
+   * positive: `dir="auto"` is the correct way to mark up text whose direction is not known in
+   * advance, and a rule that could see only `rtl` would report a page that had done exactly the
+   * right thing.
+   */
+  inheritedDir: string | null;
   computedDirection: 'ltr' | 'rtl';
   ancestorHasDirRtl: boolean;
   css: TextNodeCss;
@@ -169,13 +178,27 @@ export interface TextNodeSnapshot {
   classNames: string[];
   tagName: string;
   hasBdiAncestor: boolean;
+  /**
+   * Inside `code`, `pre`, `kbd` or `samp`.
+   *
+   * The tag name alone is not enough. A syntax-highlighted block is `pre > span.token`, so the
+   * element holding the text is a `span` and the only evidence that it is code lives further up.
+   */
+  hasCodeAncestor: boolean;
+  /**
+   * Some ancestor carries a transform of its own.
+   *
+   * Icon systems mirror by putting `[dir="rtl"] .icon { transform: … }` on a wrapper, so a glyph
+   * that has been handled correctly can show `transform: none` on its own element.
+   */
+  hasTransformedAncestor: boolean;
   unicodeBidi: string;
 }
 
 /** Everything captured from one page, in one pass. */
 export interface DomSnapshot {
   /** Bumped whenever `TextNodeSnapshot` gains or changes a field. */
-  snapshotVersion: 2;
+  snapshotVersion: 3;
   url: string;
   finalUrl: string;
   capturedAt: string;

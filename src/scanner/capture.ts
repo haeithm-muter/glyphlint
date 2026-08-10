@@ -29,6 +29,7 @@ interface RawTextNode {
   ownLang: string | null;
   inheritedLang: string | null;
   ownDir: string | null;
+  inheritedDir: string | null;
   computedDirection: string;
   ancestorHasDirRtl: boolean;
   css: TextNodeCss;
@@ -37,6 +38,8 @@ interface RawTextNode {
   classNames: string[];
   tagName: string;
   hasBdiAncestor: boolean;
+  hasCodeAncestor: boolean;
+  hasTransformedAncestor: boolean;
   unicodeBidi: string;
 }
 
@@ -121,6 +124,16 @@ function capturePage(limits: CaptureLimits): RawCapture {
     return null;
   }
 
+  function nearestDir(element: Element, includeSelf: boolean): string | null {
+    let current: Element | null = includeSelf ? element : element.parentElement;
+    while (current !== null) {
+      const dir = current.getAttribute('dir');
+      if (dir !== null && dir.trim() !== '') return dir;
+      current = current.parentElement;
+    }
+    return null;
+  }
+
   function hasAncestorMatching(element: Element, matches: (el: Element) => boolean): boolean {
     let current: Element | null = element;
     while (current !== null) {
@@ -128,6 +141,29 @@ function capturePage(limits: CaptureLimits): RawCapture {
       current = current.parentElement;
     }
     return false;
+  }
+
+  /** Tags whose contents are code, where Latin inside any language is correct rather than a slip. */
+  const CODE_TAGS = new Set(['CODE', 'PRE', 'KBD', 'SAMP']);
+
+  /**
+   * Whether any ancestor carries a transform.
+   *
+   * Memoised per element because sibling text nodes share the same chain, and without it a page of
+   * 3000 nodes would resolve the same styles thousands of times over.
+   */
+  const transformedAncestors = new Map<Element, boolean>();
+  function hasTransformedAncestor(element: Element): boolean {
+    const parent = element.parentElement;
+    if (parent === null) return false;
+
+    const memo = transformedAncestors.get(parent);
+    if (memo !== undefined) return memo;
+
+    const answer =
+      getComputedStyle(parent).transform !== 'none' || hasTransformedAncestor(parent);
+    transformedAncestors.set(parent, answer);
+    return answer;
   }
 
   /** Split a computed `font-family` into individual family names, quotes removed. */
@@ -195,6 +231,7 @@ function capturePage(limits: CaptureLimits): RawCapture {
           ownLang: element.getAttribute('lang'),
           inheritedLang: nearestLang(element, false),
           ownDir: element.getAttribute('dir'),
+          inheritedDir: nearestDir(element, false),
           computedDirection: style.direction,
           ancestorHasDirRtl: hasAncestorMatching(
             element,
@@ -235,6 +272,8 @@ function capturePage(limits: CaptureLimits): RawCapture {
           classNames: Array.from(element.classList),
           tagName: element.tagName,
           hasBdiAncestor: hasAncestorMatching(element, (el) => el.nodeName === 'BDI'),
+          hasCodeAncestor: hasAncestorMatching(element, (el) => CODE_TAGS.has(el.nodeName)),
+          hasTransformedAncestor: hasTransformedAncestor(element),
           unicodeBidi: style.unicodeBidi,
         });
       }
@@ -264,6 +303,7 @@ function analyse(raw: RawTextNode): TextNodeSnapshot {
     ownLang: raw.ownLang,
     inheritedLang: raw.inheritedLang,
     ownDir: raw.ownDir,
+    inheritedDir: raw.inheritedDir,
     computedDirection: raw.computedDirection === 'rtl' ? 'rtl' : 'ltr',
     ancestorHasDirRtl: raw.ancestorHasDirRtl,
     css: raw.css,
@@ -272,6 +312,8 @@ function analyse(raw: RawTextNode): TextNodeSnapshot {
     classNames: raw.classNames,
     tagName: raw.tagName,
     hasBdiAncestor: raw.hasBdiAncestor,
+    hasCodeAncestor: raw.hasCodeAncestor,
+    hasTransformedAncestor: raw.hasTransformedAncestor,
     unicodeBidi: raw.unicodeBidi,
   };
 }
@@ -285,7 +327,7 @@ export async function captureSnapshot(
   const raw = await page.evaluate(capturePage, limits);
 
   return {
-    snapshotVersion: 2,
+    snapshotVersion: 3,
     url: requestedUrl,
     finalUrl: raw.finalUrl,
     capturedAt: new Date().toISOString(),

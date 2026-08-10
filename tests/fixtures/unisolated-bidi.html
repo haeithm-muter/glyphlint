@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <title>Embedded left-to-right runs inside right-to-left text</title>
+  </head>
+  <body>
+    <main>
+      <h1>العزل ثنائي الاتجاه</h1>
+
+      <!-- The defect: a Latin run sandwiched between Arabic runs and followed by a full stop.
+           The stop is directionally neutral, so the algorithm has to choose a side for it. -->
+      <p id="latin-run-punctuated">مرحبا السلام Acme Corp. كتاب مرحبا</p>
+
+      <!-- Digits are directionally weak and land in the same trap. -->
+      <p id="digit-run-punctuated">مرحبا السلام 2024, كتاب مرحبا</p>
+
+      <!-- The narrowing that keeps this rule usable: no neutral character beside the Latin run,
+           so it renders where a reader expects and must never be reported. -->
+      <p id="latin-run-bare">مرحبا السلام Acme كتاب مرحبا</p>
+
+      <!-- At the edge of the text, with nothing on one side to be reordered against. -->
+      <p id="latin-run-trailing">مرحبا السلام كتاب مرحبا Acme Corp.</p>
+
+      <!-- Isolated properly. The element exists for exactly this, and it splits the text node,
+           which is why the sandwiched pattern no longer appears inside one node. -->
+      <p id="latin-run-isolated">مرحبا السلام <bdi>Acme Corp.</bdi> كتاب مرحبا</p>
+
+      <!-- Plain right-to-left text with nothing embedded. -->
+      <p id="arabic-plain">مرحبا السلام كتاب مرحبا السلام كتاب</p>
+    </main>
+  </body>
+</html>

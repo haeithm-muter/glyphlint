@@ -15,6 +15,9 @@ estimate, because a threshold with no stated source is the most dangerous thing 
 | Single-line box, excluded from line-height findings | client height < 2 × font size | **Estimate.** A box shorter than two lines holds one line, which cannot collide with anything. |
 | Minimum text for a font-coverage finding | 4 graphemes | **Estimate.** Two glyphs can measure identically in two fonts by coincidence; a short word rarely does. |
 | Maximum Latin share for a case-transform finding | 20% of lettered graphemes | **Estimate.** Above it, `text-transform` has real Latin text to act on. |
+| Minimum right-to-left text before a missing `dir` is reported | 15 graphemes | **Estimate.** Below it the text is a brand name or a loanword, which the bidirectional algorithm places correctly on its own. |
+| Minimum text before a language/script mismatch is reported | 20 graphemes, 80% in one script | **Estimate.** A heading or a quoted phrase in another language is not a mismatch. |
+| Minimum embedded run before a bidi isolation finding | 2 graphemes | **Estimate.** A single character is an initial or a footnote marker. |
 
 Three things this table is honest about:
 

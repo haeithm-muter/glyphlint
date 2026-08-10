@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Right-to-left text with and without a declared direction</title>
+    <style>
+      /* Direction set by stylesheet alone. The page looks correct and the declaration that
+         assistive technology reads is still missing. */
+      .styled-rtl {
+        direction: rtl;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Direction declarations</h1>
+
+      <!-- The defect: a full Arabic paragraph with no dir on it or on anything above it. -->
+      <p id="arabic-undeclared">مرحبا السلام كتاب مرحبا السلام كتاب</p>
+
+      <!-- The same text laid out right-to-left by CSS only. Reported, at reduced severity. -->
+      <p id="arabic-css-only" class="styled-rtl">مرحبا السلام كتاب مرحبا السلام كتاب</p>
+
+      <!-- Hebrew, to show the rule is about direction rather than about Arabic. -->
+      <p id="hebrew-undeclared">שלום עולם ספר שלום עולם ספר</p>
+
+      <!-- Declared correctly. Must stay clean. -->
+      <p id="arabic-declared" dir="rtl">مرحبا السلام كتاب مرحبا السلام كتاب</p>
+
+      <!-- dir="auto" on an ancestor is the correct markup for content of unknown direction, and
+           resolves to rtl here. A rule that could only see dir="rtl" would report this. -->
+      <div dir="auto">
+        <p id="arabic-auto">مرحبا السلام كتاب مرحبا السلام كتاب</p>
+      </div>
+
+      <!-- Too short to be content: a brand name inside an English sentence. The bidirectional
+           algorithm places it correctly with no declaration at all. -->
+      <p id="arabic-fragment">Our partner مرحبا opened today.</p>
+
+      <!-- A left-to-right script with no dir is simply a page. -->
+      <p id="latin-undeclared">Plain English text needs no direction declaration.</p>
+    </main>
+  </body>
+</html>

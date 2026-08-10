@@ -15,24 +15,39 @@ import type { DomSnapshot, Rule, ScriptId, Severity, Violation } from '../types.
 import { caseTransformOnCaselessScript } from './case-transform-on-caseless-script.js';
 import { cursiveScriptLetterSpacing } from './cursive-script-letter-spacing.js';
 import { insufficientLineHeightForScript } from './insufficient-line-height-for-script.js';
+import { langScriptMismatch } from './lang-script-mismatch.js';
+import { missingDirAttribute } from './missing-dir-attribute.js';
 import { missingScriptFontCoverage } from './missing-script-font-coverage.js';
+import { physicalCssInBidiContext } from './physical-css-in-bidi-context.js';
+import { unisolatedBidiRun } from './unisolated-bidi-run.js';
+import { unmirroredDirectionalIcon } from './unmirrored-directional-icon.js';
 
 export { caseTransformOnCaselessScript } from './case-transform-on-caseless-script.js';
 export { cursiveScriptLetterSpacing } from './cursive-script-letter-spacing.js';
 export { insufficientLineHeightForScript } from './insufficient-line-height-for-script.js';
+export { langScriptMismatch } from './lang-script-mismatch.js';
+export { missingDirAttribute } from './missing-dir-attribute.js';
 export { missingScriptFontCoverage } from './missing-script-font-coverage.js';
+export { physicalCssInBidiContext } from './physical-css-in-bidi-context.js';
+export { unisolatedBidiRun } from './unisolated-bidi-run.js';
+export { unmirroredDirectionalIcon } from './unmirrored-directional-icon.js';
 
 /**
  * Every rule GlyphLint runs.
  *
- * Group A of the specification: script integrity. Groups B and C are added to this array as they
- * are built, and nothing else needs to change when they are.
+ * Group A, script integrity, and group B, direction and layout. Group C is added to this array as
+ * it is built, and nothing else needs to change when it is.
  */
 export const RULES: readonly Rule[] = [
   cursiveScriptLetterSpacing,
   insufficientLineHeightForScript,
   missingScriptFontCoverage,
   caseTransformOnCaselessScript,
+  missingDirAttribute,
+  langScriptMismatch,
+  physicalCssInBidiContext,
+  unisolatedBidiRun,
+  unmirroredDirectionalIcon,
 ];
 
 /** Worst first. The order a person reads a report in. */
@@ -84,12 +99,14 @@ export function runRules(snapshot: DomSnapshot, options: RunRulesOptions = {}): 
 
   for (const rule of RULES) {
     if (disabled.has(rule.id)) continue;
-    if (severityFloor !== null && SEVERITY_RANK[rule.severity] > severityFloor) continue;
 
     for (const violation of rule.check(snapshot)) {
-      // Filtered on the finding rather than on the rule: a rule may affect several writing
-      // systems, and the caller asked about the text, not about the rule.
+      // Both filters read the finding, never the rule. A rule may affect several writing systems,
+      // and a rule may grade one of its own findings below the severity it declares — see
+      // `missing-dir-attribute`. Filtering on the rule would let such a finding through a filter
+      // it does not qualify for, which is the opposite of what the caller asked for.
       if (wanted !== null && !wanted.has(violation.script)) continue;
+      if (severityFloor !== null && SEVERITY_RANK[violation.severity] > severityFloor) continue;
       violations.push(violation);
     }
   }

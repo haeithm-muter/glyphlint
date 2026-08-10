@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <title>Physical and logical CSS in a right-to-left page</title>
+    <style>
+      /* Asymmetric physical spacing: does not flip when the direction does. */
+      .indent-left {
+        margin-left: 40px;
+      }
+      /* The physical twin of margin-inline-start below. In a right-to-left context these two
+         declarations compute to exactly the same numbers, which is why margins were removed
+         from this rule — see decision 013. */
+      .indent-right {
+        margin-right: 40px;
+      }
+      .pad-asymmetric {
+        padding-left: 32px;
+        padding-right: 8px;
+      }
+      /* Wrong on the screen right now. */
+      .align-left {
+        text-align: left;
+      }
+      /* Correct today, broken the moment this component is rendered left-to-right. */
+      .align-right {
+        text-align: right;
+      }
+
+      /* Clean: the logical equivalents follow the reader. */
+      .indent-logical {
+        margin-inline-start: 40px;
+      }
+      .align-logical {
+        text-align: start;
+      }
+      /* Clean: symmetric physical values do not flip into anything. */
+      .pad-symmetric {
+        padding-left: 16px;
+        padding-right: 16px;
+      }
+      /* Clean: the centring idiom, which computes to a pair of equal pixel values. */
+      .centred {
+        width: 300px;
+        margin: 0 auto;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>الاتجاه والتخطيط</h1>
+
+      <p id="rtl-margin-left" class="indent-left">مرحبا السلام كتاب مرحبا السلام كتاب</p>
+      <p id="rtl-padding-asymmetric" class="pad-asymmetric">مرحبا السلام كتاب مرحبا السلام</p>
+      <p id="rtl-align-left" class="align-left">مرحبا السلام كتاب مرحبا السلام كتاب</p>
+      <p id="rtl-align-right" class="align-right">مرحبا السلام كتاب مرحبا السلام كتاب</p>
+
+      <p id="rtl-margin-right" class="indent-right">مرحبا السلام كتاب مرحبا السلام كتاب</p>
+      <p id="rtl-margin-logical" class="indent-logical">مرحبا السلام كتاب مرحبا السلام كتاب</p>
+      <p id="rtl-align-logical" class="align-logical">مرحبا السلام كتاب مرحبا السلام كتاب</p>
+      <p id="rtl-padding-symmetric" class="pad-symmetric">مرحبا السلام كتاب مرحبا السلام</p>
+      <p id="rtl-centred" class="centred">مرحبا السلام كتاب مرحبا السلام كتاب</p>
+
+      <!-- The browser puts padding-left: 6px and padding-right: 6px on every button from its own
+           stylesheet. Symmetric, so it is CSS the author never wrote and never a finding. -->
+      <button id="rtl-button">اشتري الآن</button>
+
+      <!-- The list marker uses padding-inline-start in the UA stylesheet, so nothing physical
+           reaches the computed value here either. -->
+      <ul>
+        <li id="rtl-list-item">عنصر من القائمة</li>
+      </ul>
+    </main>
+  </body>
+</html>

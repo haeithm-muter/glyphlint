@@ -3,10 +3,16 @@ import { describe, expect, it } from 'vitest';
 import { RULES, runRules } from '../../src/rules/index.js';
 import { SAMPLES, snapshotOf, snapshotOfOne, textNode } from './make-snapshot.js';
 
-/** Two nodes that between them trip all four Group A rules. */
+/**
+ * Two nodes that between them trip all four Group A rules and nothing else.
+ *
+ * The Arabic node declares `dir` so that the direction rules stay out of this fixture: it exists
+ * to test ordering and filtering, and it can only do that if the set of findings is known exactly.
+ */
 const MIXED_PAGE = snapshotOf([
   textNode(SAMPLES.arabicLong, {
     selector: '#arabic',
+    ownDir: 'rtl',
     css: { letterSpacing: '2px', textTransform: 'uppercase' },
   }),
   textNode(SAMPLES.thaiLong, {
@@ -18,14 +24,21 @@ const MIXED_PAGE = snapshotOf([
 ]);
 
 describe('the registry', () => {
-  it('holds every Group A rule exactly once', () => {
+  it('holds every rule exactly once', () => {
     const ids = RULES.map((rule) => rule.id);
 
     expect(ids).toEqual([
+      // Group A — script integrity.
       'cursive-script-letter-spacing',
       'insufficient-line-height-for-script',
       'missing-script-font-coverage',
       'case-transform-on-caseless-script',
+      // Group B — direction and layout.
+      'missing-dir-attribute',
+      'lang-script-mismatch',
+      'physical-css-in-bidi-context',
+      'unisolated-bidi-run',
+      'unmirrored-directional-icon',
     ]);
     expect(new Set(ids).size).toBe(ids.length);
   });
@@ -48,7 +61,33 @@ describe('the registry', () => {
   });
 
   it('says nothing about a clean page', () => {
-    expect(runRules(snapshotOfOne(SAMPLES.arabicLong))).toEqual([]);
+    expect(runRules(snapshotOfOne(SAMPLES.arabicLong, { ownDir: 'rtl' }))).toEqual([]);
+  });
+});
+
+describe('severity belongs to the finding, not to the rule', () => {
+  // `missing-dir-attribute` declares itself serious and grades one of its own cases moderate: text
+  // laid out right-to-left by CSS with no dir attribute anywhere. Filtering on the rule rather than
+  // on the finding would let that moderate finding through a `serious` filter — see decision 012.
+  const CSS_ONLY_DIRECTION = snapshotOfOne(SAMPLES.arabicLong, {
+    computedDirection: 'rtl',
+    css: { direction: 'rtl' },
+  });
+
+  it('produces the reduced finding from a rule that declares itself serious', () => {
+    const violations = runRules(CSS_ONLY_DIRECTION);
+
+    expect(violations).toHaveLength(1);
+    expect(violations[0]?.ruleId).toBe('missing-dir-attribute');
+    expect(violations[0]?.severity).toBe('moderate');
+  });
+
+  it('filters that finding out at minSeverity: serious', () => {
+    expect(runRules(CSS_ONLY_DIRECTION, { minSeverity: 'serious' })).toEqual([]);
+  });
+
+  it('keeps it at minSeverity: moderate', () => {
+    expect(runRules(CSS_ONLY_DIRECTION, { minSeverity: 'moderate' })).toHaveLength(1);
   });
 });
 

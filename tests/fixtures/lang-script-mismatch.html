@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Declared languages against the scripts actually used</title>
+  </head>
+  <body>
+    <main>
+      <h1>Language and script</h1>
+
+      <!-- The defect: Arabic inheriting lang="en" from the document. A screen reader hands this
+           to an English voice. -->
+      <p id="arabic-under-en">مرحبا السلام كتاب مرحبا السلام كتاب</p>
+
+      <!-- The same defect declared explicitly rather than inherited. -->
+      <p id="thai-under-en" lang="en">สวัสดี ภาษาไทย ขอบคุณ สวัสดี ภาษาไทย ขอบคุณ</p>
+
+      <!-- Persian is written in the Arabic script. This is correct markup and the single most
+           important thing this rule must never report. -->
+      <p id="arabic-under-fa" lang="fa">مرحبا السلام كتاب مرحبا السلام كتاب</p>
+
+      <!-- Japanese mixes Han, kana and Latin inside one sentence. All three are expected. -->
+      <p id="han-under-ja" lang="ja">中文 你好 汉字 中文 你好 汉字 中文 你好 汉字</p>
+
+      <!-- Korean legitimately uses Han alongside Hangul. -->
+      <p id="han-under-ko" lang="ko">中文 你好 汉字 中文 你好 汉字 中文 你好 汉字</p>
+
+      <!-- Vietnamese is Latin script with heavy diacritics, not a script of its own. -->
+      <p id="latin-under-vi" lang="vi">Tiếng Việt xin chào Tiếng Việt xin chào</p>
+
+      <!-- An explicit BCP-47 script subtag overrides the language table: Serbian in Latin. -->
+      <p id="latin-under-sr-latn" lang="sr-Latn">Hello world Bonjour Hello world Bonjour</p>
+
+      <!-- Code is legitimately Latin inside any language. The element holding the text is a span
+           and only its ancestry says it is code, which is the shape a tag-name test would miss. -->
+      <div lang="ar">
+        <pre><span id="code-token">const greeting = "hello world";</span></pre>
+      </div>
+
+      <!-- Below the length threshold: a heading in another language is not a mismatch. -->
+      <p id="arabic-short" lang="en">مرحبا</p>
+    </main>
+  </body>
+</html>

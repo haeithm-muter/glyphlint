@@ -141,11 +141,178 @@ describe('case-transform-on-caseless-script on a real page', () => {
   });
 });
 
+describe('missing-dir-attribute on a real page', () => {
+  it('reports the undeclared right-to-left text and nothing that declared itself', async () => {
+    const { violations } = await scan('missing-dir.html');
+
+    expect(flaggedBy(violations, 'missing-dir-attribute').sort()).toEqual([
+      '#arabic-css-only',
+      '#arabic-undeclared',
+      '#hebrew-undeclared',
+    ]);
+  });
+
+  it('grades CSS-only direction below a missing declaration', async () => {
+    const { violations } = await scan('missing-dir.html');
+    const byId = new Map(violations.map((violation) => [violation.selector, violation]));
+
+    expect(byId.get('#arabic-undeclared')?.severity).toBe('serious');
+    expect(byId.get('#arabic-css-only')?.severity).toBe('moderate');
+  });
+
+  it('accepts dir="auto" on an ancestor, which resolves to rtl here', async () => {
+    const { snapshot, violations } = await scan('missing-dir.html');
+    const node = snapshot.nodes.find((entry) => entry.selector === '#arabic-auto');
+
+    // The measured trap this field was added for: the text is laid out right-to-left and the
+    // markup is correct. Seeing only `dir="rtl"` would report a page that did the right thing.
+    expect(node?.computedDirection).toBe('rtl');
+    expect(node?.inheritedDir).toBe('auto');
+    expect(flaggedBy(violations, 'missing-dir-attribute')).not.toContain('#arabic-auto');
+  });
+});
+
+describe('lang-script-mismatch on a real page', () => {
+  it('reports the mismatches and none of the languages that only look wrong', async () => {
+    const { violations } = await scan('lang-script-mismatch.html');
+
+    // Persian in Arabic script, Japanese and Korean in Han, Vietnamese in Latin, and Serbian
+    // under an explicit Latn subtag are all correct markup and all on this page.
+    expect(flaggedBy(violations, 'lang-script-mismatch').sort()).toEqual([
+      '#arabic-under-en',
+      '#thai-under-en',
+    ]);
+  });
+
+  it('leaves a syntax-highlighted code span alone', async () => {
+    const { snapshot, violations } = await scan('lang-script-mismatch.html');
+    const node = snapshot.nodes.find((entry) => entry.selector === '#code-token');
+
+    // The shape a tag-name test would miss: the element is a span, and only its ancestry says
+    // the content is code.
+    expect(node?.tagName).toBe('SPAN');
+    expect(node?.hasCodeAncestor).toBe(true);
+    expect(flaggedBy(violations, 'lang-script-mismatch')).not.toContain('#code-token');
+  });
+});
+
+describe('physical-css-in-bidi-context on a real page', () => {
+  it('reports the physical alignments and nothing else on the page', async () => {
+    const { violations } = await scan('physical-css-rtl.html');
+
+    expect(flaggedBy(violations, 'physical-css-in-bidi-context').sort()).toEqual([
+      '#rtl-align-left',
+      '#rtl-align-right',
+    ]);
+  });
+
+  it('proves why margins are absent: the fix computes identically to the defect', async () => {
+    const { snapshot, violations } = await scan('physical-css-rtl.html');
+    const byId = new Map(snapshot.nodes.map((entry) => [entry.selector, entry]));
+
+    // The measurement that removed half of this rule. `margin-right: 40px` was written on one of
+    // these and `margin-inline-start: 40px` on the other; in a right-to-left context start *is*
+    // right, so the two arrive at a rule as the same numbers. There is nothing here to key on.
+    const physical = byId.get('#rtl-margin-right');
+    const logical = byId.get('#rtl-margin-logical');
+    expect(physical?.css.marginRight).toBe('40px');
+    expect(physical?.css.marginRight).toBe(logical?.css.marginRight);
+    expect(physical?.css.marginLeft).toBe(logical?.css.marginLeft);
+
+    // So none of them is reported. Reporting the physical one would report the logical one, and
+    // the logical one is the correct code this rule would otherwise be recommending — decision 013.
+    const flagged = flaggedBy(violations, 'physical-css-in-bidi-context');
+    expect(flagged).not.toContain('#rtl-margin-right');
+    expect(flagged).not.toContain('#rtl-margin-logical');
+    expect(flagged).not.toContain('#rtl-margin-left');
+  });
+
+  it('leaves the browser stylesheet and the centring idiom alone', async () => {
+    const { snapshot, violations } = await scan('physical-css-rtl.html');
+    const flagged = flaggedBy(violations, 'physical-css-in-bidi-context');
+    const button = snapshot.nodes.find((entry) => entry.selector === '#rtl-button');
+
+    expect(button?.css.paddingLeft).toBe('6px');
+    expect(flagged).not.toContain('#rtl-button');
+    expect(flagged).not.toContain('#rtl-centred');
+    expect(flagged).not.toContain('#rtl-list-item');
+  });
+});
+
+describe('unisolated-bidi-run on a real page', () => {
+  it('reports only the sandwiched runs that touch punctuation', async () => {
+    const { violations } = await scan('unisolated-bidi.html');
+
+    // The bare Latin run, the trailing run and the properly isolated one are all on this page.
+    expect(flaggedBy(violations, 'unisolated-bidi-run').sort()).toEqual([
+      '#digit-run-punctuated',
+      '#latin-run-punctuated',
+    ]);
+  });
+
+  it('fires despite every paragraph computing unicode-bidi: isolate', async () => {
+    const { snapshot, violations } = await scan('unisolated-bidi.html');
+    const node = snapshot.nodes.find((entry) => entry.selector === '#latin-run-punctuated');
+
+    // The measured finding that forced this rule to be rebuilt: Chromium puts
+    // `unicode-bidi: isolate` on every block element from its own stylesheet. A rule that skipped
+    // isolated elements, as the specification proposed, would be silent on every paragraph.
+    expect(node?.unicodeBidi).toBe('isolate');
+    expect(flaggedBy(violations, 'unisolated-bidi-run')).toContain('#latin-run-punctuated');
+  });
+
+  it('is silenced by a bdi that actually wraps the run', async () => {
+    const { violations } = await scan('unisolated-bidi.html');
+
+    expect(flaggedBy(violations, 'unisolated-bidi-run')).not.toContain('#latin-run-isolated');
+  });
+});
+
+describe('unmirrored-directional-icon on a real page', () => {
+  it('reports the arrows nothing turned around', async () => {
+    const { violations } = await scan('directional-icon.html');
+    const flagged = flaggedBy(violations, 'unmirrored-directional-icon');
+
+    expect(flagged).toContain('#arrow-plain');
+    expect(flagged).toContain('#arrow-classed');
+  });
+
+  it('credits every form of mirroring the browser resolves to a matrix', async () => {
+    const { snapshot, violations } = await scan('directional-icon.html');
+    const flagged = flaggedBy(violations, 'unmirrored-directional-icon');
+    const byId = new Map(snapshot.nodes.map((entry) => [entry.selector, entry]));
+
+    // scaleX(-1) and rotate(180deg) both arrive as matrices, and the wrapper case arrives with
+    // `transform: none` on the element that holds the text.
+    expect(byId.get('#arrow-mirrored')?.css.transform).toBe('matrix(-1, 0, 0, 1, 0, 0)');
+    expect(byId.get('#arrow-turned')?.css.transform).toBe('matrix(-1, 0, 0, -1, 0, 0)');
+    expect(byId.get('#arrow-wrapped')?.hasTransformedAncestor).toBe(true);
+
+    for (const selector of ['#arrow-mirrored', '#arrow-turned', '#arrow-wrapped']) {
+      expect(flagged).not.toContain(selector);
+    }
+  });
+
+  it('does not credit a transform that leaves the arrow pointing where it was', async () => {
+    const { violations } = await scan('directional-icon.html');
+
+    expect(flaggedBy(violations, 'unmirrored-directional-icon')).toContain('#arrow-nudged');
+  });
+
+  it('never reports vertical arrows or a layout class', async () => {
+    const { violations } = await scan('directional-icon.html');
+    const flagged = flaggedBy(violations, 'unmirrored-directional-icon');
+
+    expect(flagged).not.toContain('#arrow-vertical');
+    expect(flagged).not.toContain('#layout-class');
+  });
+});
+
 describe('the snapshot the rules were given', () => {
   it('is at the version the rules were written against', async () => {
     const { snapshot } = await scan('cursive-letter-spacing.html');
 
-    expect(snapshot.snapshotVersion).toBe(2);
+    expect(snapshot.snapshotVersion).toBe(3);
   });
 
   it('carries the computed values the hand-written test snapshots assume', async () => {

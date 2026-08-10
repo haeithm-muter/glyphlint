@@ -20,6 +20,7 @@ import type {
   Rule,
   ScriptId,
   ScriptRun,
+  Severity,
   TextNodeSnapshot,
   Violation,
 } from '../types.js';
@@ -168,13 +169,24 @@ export interface ViolationMessages {
   whyItMatters: string;
   howToFix: string;
   wcagRef?: string;
+  /**
+   * Set only where one rule genuinely grades its own findings differently.
+   *
+   * `missing-dir-attribute` is the case this exists for: text left with no direction at all and
+   * text given a direction through CSS alone are the same defect at two strengths, and splitting
+   * them into two rules would make the report harder to read, not more precise.
+   */
+  severity?: Severity;
 }
 
 /**
  * Build a finding from the rule that produced it.
  *
  * The rule's own metadata is copied across rather than restated, so a violation can never claim a
- * severity or a confidence its rule does not declare.
+ * confidence its rule does not declare. Severity is the one field a rule may lower for a
+ * particular finding, and `runRules` filters on the value the finding carries rather than on the
+ * value the rule declares — otherwise a rule could smuggle a `minor` finding past a `serious`
+ * filter simply by being declared `serious` itself.
  *
  * `wcagRef` is not inherited from the rule on purpose. A rule can relate to a criterion in general
  * while a particular finding falls outside what that criterion actually requires — see
@@ -190,7 +202,7 @@ export function violationFrom(
   const violation: Violation = {
     ruleId: rule.id,
     title: rule.title,
-    severity: rule.severity,
+    severity: messages.severity ?? rule.severity,
     confidence: rule.confidence,
     source: 'glyphlint',
     script,
@@ -205,7 +217,13 @@ export function violationFrom(
   return violation;
 }
 
-/** Format a measured number for a report sentence: `1.92`, not `1.9199999999999999`. */
+/**
+ * Format a measured number for a report sentence: `1.92`, not `1.9199999999999999`.
+ *
+ * Trailing zeros are stripped only when there is a decimal point to strip them after. Without that
+ * guard, `round(100, 0)` reports `1`, which is not a rounding error — it is a different number.
+ */
 export function round(value: number, decimals = 2): string {
-  return value.toFixed(decimals).replace(/\.?0+$/u, '');
+  const fixed = value.toFixed(decimals);
+  return fixed.includes('.') ? fixed.replace(/\.?0+$/u, '') : fixed;
 }

@@ -22,6 +22,135 @@ supersedes the old one, and the old one is marked `Superseded by`.
 
 ---
 
+## 014 — R8 reads the text node, not the `unicode-bidi` property
+
+**Status:** Accepted
+**Date:** 2026-08-10
+
+**Context** — The specification for `unisolated-bidi-run` says to flag an embedded left-to-right
+run when there is no `bdi` ancestor and no `unicode-bidi: isolate | isolate-override | plaintext`.
+Measured in Chromium, that last condition silences the rule everywhere: the HTML user-agent
+stylesheet sets `unicode-bidi: isolate` on every block element, so an ordinary `<p>` reports
+`isolate` on a page that has never thought about bidirectional text at all.
+
+The deeper problem is that the property was never the right thing to read. `unicode-bidi: isolate`
+on a containing element isolates that element from its siblings. It does nothing for one run
+*inside* its own text, which is the case this rule exists for. Isolation that helps has to wrap the
+embedded run.
+
+**Decision** — Detect on the text node instead. Walk `scriptRuns` inside one node looking for a
+Latin or numeric run sandwiched between two right-to-left runs and touching a directionally neutral
+character. Drop the `unicode-bidi` check entirely.
+
+The argument that makes this sound is structural: had the embedded run been wrapped in `<bdi>` or in
+an element carrying `unicode-bidi: isolate`, that wrapper would have split the text into separate
+nodes, and the sandwiched pattern could not appear inside a single node's text. The pattern
+surviving in one node **is** the evidence that nothing wrapped it. `hasBdiAncestor` is kept as a
+conservative silence: it does not isolate the inner run, but an author who reached for `<bdi>` has
+thought about the problem and we do not lecture them.
+
+**Consequences** — The rule now fires on the paragraphs it was written for. It still reports a risk
+rather than an observation, because we do not run the bidirectional algorithm to see whether a
+particular line actually reorders, and it is marked `heuristic` for that reason. If a campaign shows
+it is still noisy, the next narrowing is to require the neutral character to sit at the boundary of
+the run rather than anywhere within it. It never gets looser.
+
+## 013 — Physical margins cannot be told from the logical properties that fix them
+
+**Status:** Accepted
+**Date:** 2026-08-10
+
+**Context** — `physical-css-in-bidi-context` was specified to report non-zero
+`margin-left/right`, `padding-left/right` and `text-align: left|right` in a right-to-left context.
+It was built that way, and the first run against a real fixture reported the control element — the
+one written with `margin-inline-start`, the logical property that is the rule's own recommended fix.
+
+That is not a bug in the implementation. In a right-to-left context, `start` *is* `right`, and a
+computed style is the resolved result:
+
+| Declared | Computed left | Computed right |
+|---|---|---|
+| `margin-right: 40px` | `0px` | `40px` |
+| `margin-inline-start: 40px` | `0px` | `40px` |
+| `margin-left: 40px` | `40px` | `0px` |
+| `margin-inline-end: 40px` | `40px` | `0px` |
+
+Every outcome is reachable from both a physical declaration and a logical one, on every property
+including `margin-inline-start` itself. Symmetry tests, noise floors and side comparisons all fail
+for the same reason: there is no information left in the computed value to key on.
+
+`text-align` is the exception. Chromium keeps `start` and `end` as themselves rather than resolving
+them to a side, so an explicit `left` or `right` really was written as one.
+
+**Decision** — The rule reports `text-align: left | right` only. Margins and padding are removed,
+and both the description and the `limitations` say so and say why.
+
+Reporting them was the worst option available. A finding that tells an author their
+`margin-inline-start` is a defect does not merely waste their time — it argues against the fix, in
+a report whose only value is that it can be trusted.
+
+**Consequences** — The rule now covers the smaller half of the defect it is named after, and the
+`limitations` string states plainly that a page can be full of `margin-left` and this rule will be
+silent about all of it. Recovering the other half means capturing *declared* values rather than
+computed ones: walking `document.styleSheets` at capture time and testing `element.matches()`
+against the rules that declare a physical property. That is a new capture mechanism, it fails on
+cross-origin stylesheets, and it is not attempted here. Until it is, the honest position is a
+narrow rule that says what it cannot see.
+
+## 012 — Severity is a property of the finding, not of the rule
+
+**Status:** Accepted
+**Date:** 2026-08-10
+
+**Context** — `missing-dir-attribute` grades itself: right-to-left text with no direction at all is
+`serious`, and the same text laid out right-to-left by CSS with no `dir` attribute anywhere is
+`moderate`, because the page looks correct and only the declaration is missing. Splitting that into
+two rules would make the report harder to read and would not make it more precise.
+
+The rule layer as built for group A could not express that. `violationFrom` copied `rule.severity`
+onto every finding, and `runRules` filtered by `rule.severity` before running the rule at all. A
+rule declared `serious` that emitted a `moderate` finding would have had that finding pass a
+`minSeverity: 'serious'` filter untouched — the filter would have been answering a question about
+the rule while the caller was asking one about the text.
+
+**Decision** — A finding may carry a severity below the one its rule declares, and both filters in
+`runRules` read the finding rather than the rule. Confidence is not overridable: it describes how
+the rule knows what it knows, which does not vary case by case.
+
+**Consequences** — Rules are no longer skipped before running when a severity floor is set, so a
+filtered run costs the same as an unfiltered one. That is the correct trade: the engine is pure and
+runs in milliseconds, and a filter that is fast and wrong is not a saving. A test in
+`tests/rules/index.test.ts` asserts the moderate finding is excluded at `minSeverity: 'serious'`,
+so the old behaviour cannot return unnoticed.
+
+## 011 — Snapshot version 3: three facts about ancestors
+
+**Status:** Accepted
+**Date:** 2026-08-10
+
+**Context** — Three group B rules each needed something the snapshot could not answer, and in each
+case the missing fact lived above the element rather than on it.
+
+- `inheritedDir` — the snapshot carried `ownDir` and `ancestorHasDirRtl`, and the second sees only
+  `rtl`. `dir="auto"` is the correct markup for text whose direction is not known when the page is
+  written, and it resolves to `rtl` for Arabic content. Without this field, `missing-dir-attribute`
+  reports every page that handled direction properly.
+- `hasCodeAncestor` — `lang-script-mismatch` must skip code. A syntax-highlighted block is
+  `pre > span.token`, so the element holding the text is a `span` and the tag name alone misses the
+  common case entirely.
+- `hasTransformedAncestor` — icon systems mirror with `[dir="rtl"] .wrapper { transform: … }`, so a
+  correctly mirrored arrow shows `transform: none` on its own element.
+
+**Decision** — All three are captured, and `snapshotVersion` becomes 3. `hasTransformedAncestor` is
+memoised per element during capture, because sibling text nodes share an ancestor chain and a page
+of 3000 nodes would otherwise resolve the same styles thousands of times.
+
+**Consequences** — The rules stay pure, which is the point: each of these was a moment where a rule
+appeared to need a browser, and the answer was to extend the snapshot rather than to reach for one.
+`ancestorHasDirRtl` is now redundant with `inheritedDir` and is kept because removing a field is a
+separate decision from adding one. Capture does slightly more work per node; the walk is memoised
+and bounded by tree depth.
+
 ## 010 — The flagship rule carries no WCAG reference, and that is the honest answer
 
 **Status:** Accepted

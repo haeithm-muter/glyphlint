@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <title>Directional icons in a right-to-left page</title>
+    <style>
+      /* Mirroring on the icon itself. The browser resolves this to a matrix, so a rule that
+         searched the computed value for the string scaleX would find nothing here. */
+      .mirrored {
+        display: inline-block;
+        transform: scaleX(-1);
+      }
+      /* The same job done by a half turn: matrix(-1, 0, 0, -1, 0, 0), where both shear terms
+         are zero. A rotation test that only looked at shear would miss this. */
+      .turned {
+        display: inline-block;
+        transform: rotate(180deg);
+      }
+      /* Mirroring applied by a wrapper, which is how icon systems usually do it. */
+      [dir='rtl'] .icon-wrapper {
+        display: inline-block;
+        transform: scaleX(-1);
+      }
+      /* A transform that leaves the arrow pointing exactly where it was. */
+      .nudged {
+        display: inline-block;
+        transform: translateX(4px);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>الأيقونات الاتجاهية</h1>
+
+      <!-- The defect: a forward arrow, unmirrored, in a right-to-left page. -->
+      <p id="arrow-plain">التالي →</p>
+
+      <!-- A directional class name on an element that also holds text. -->
+      <p id="arrow-classed" class="chevron-right">التالي</p>
+
+      <!-- The ids sit on the elements that hold the arrow, not on the paragraphs around them:
+           a text node belongs to its immediate parent, and that is the element a rule judges. -->
+
+      <!-- Moved but not turned: still pointing the wrong way. -->
+      <p><span id="arrow-nudged" class="nudged">←</span> السابق</p>
+
+      <!-- Handled on the element itself. -->
+      <p><span id="arrow-mirrored" class="mirrored">→</span> التالي</p>
+
+      <!-- Handled by a half turn. -->
+      <p><span id="arrow-turned" class="turned">→</span> التالي</p>
+
+      <!-- Handled by a wrapper, with no transform on the element holding the text. -->
+      <p><span class="icon-wrapper"><span id="arrow-wrapped">→</span></span> التالي</p>
+
+      <!-- Vertical arrows mean the same thing in every direction and must never be mirrored. -->
+      <p id="arrow-vertical">أعلى ↑ أسفل ↓</p>
+
+      <!-- A layout class that merely contains a direction word is not an icon. -->
+      <p id="layout-class" class="left-column">عمود جانبي</p>
+
+      <!-- Plain right-to-left text with no direction named anywhere in it. -->
+      <p id="no-icon">مرحبا السلام كتاب مرحبا السلام كتاب</p>
+    </main>
+  </body>
+</html>
