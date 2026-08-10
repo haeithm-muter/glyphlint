@@ -35,7 +35,7 @@ describe('scanUrl against a clean page', () => {
   it('produces a snapshot at the declared version', async () => {
     const result = await scanUrl(server.fixture('clean.html'));
 
-    expect(result.snapshot?.snapshotVersion).toBe(1);
+    expect(result.snapshot?.snapshotVersion).toBe(2);
     expect(result.snapshot?.documentLang).toBe('en');
     expect(result.snapshot?.truncated).toBe(false);
     expect(result.snapshot?.nodes.length).toBeGreaterThan(0);
@@ -84,6 +84,25 @@ describe('snapshot capture', () => {
     expect(arabic?.ancestorHasDirRtl).toBe(true);
     expect(arabic?.tagName).toBe('P');
     expect(arabic?.classNames).toContain('spaced-arabic');
+  });
+
+  it('records the two values snapshot version 2 added', async () => {
+    const result = await scanUrl(server.fixture('multi-script.html'));
+    const nodes = result.snapshot?.nodes ?? [];
+
+    const clamped = nodeFor(nodes, '#clamped-vietnamese');
+    expect(clamped?.css.webkitLineClamp).toBe('2');
+    expect(clamped?.css.overflowY).toBe('hidden');
+
+    const mirrored = nodeFor(nodes, '#mirrored-arrow');
+    // The computed value is a resolved matrix, never the function the author wrote. A rule that
+    // searched this string for `scaleX` would find nothing on a page that mirrors every icon.
+    expect(mirrored?.css.transform).toBe('matrix(-1, 0, 0, 1, 0, 0)');
+
+    // Absent on an ordinary paragraph, which is what most nodes will report.
+    const plainLatin = nodeFor(nodes, '#plain-latin');
+    expect(plainLatin?.css.webkitLineClamp).toBe('none');
+    expect(plainLatin?.css.transform).toBe('none');
   });
 
   it('records line height and box metrics', async () => {

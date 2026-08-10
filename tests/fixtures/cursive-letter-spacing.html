@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <title>Letter spacing on a cursive script</title>
+    <style>
+      /* The defect. Tracking that would merely loosen a Latin headline severs the joins between
+         Arabic letters, so each word arrives as a row of disconnected shapes. */
+      .tracked {
+        letter-spacing: 2px;
+      }
+      /* The same declaration written in em, to prove the rule reads the value the browser
+         resolved (1.92px at 16px) rather than the one the stylesheet wrote. */
+      .tracked-em {
+        letter-spacing: 0.12em;
+      }
+      /* Rounding noise, not a decision. Must not be reported. */
+      .tracked-noise {
+        letter-spacing: 0.005px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1 id="arabic-tracked" class="tracked">مرحبا السلام كتاب</h1>
+    <p id="arabic-tracked-em" class="tracked-em">مرحبا السلام كتاب</p>
+    <p id="syriac-tracked" class="tracked">ܫܠܡܐ ܟܬܒܐ ܣܘܪܝܝܐ</p>
+
+    <!-- Clean: the same script at the default spacing. -->
+    <p id="arabic-clean">مرحبا السلام كتاب</p>
+
+    <!-- Must not be reported. Hebrew is right-to-left but its letters are disconnected, so
+         tracking spaces them out exactly as it spaces out Latin. Nothing breaks. -->
+    <p id="hebrew-tracked" class="tracked">שלום ספר עברית</p>
+
+    <!-- Must not be reported. A Latin run inside an Arabic page is Latin text, and the rule keys
+         on the script of the node rather than on the language of the page. -->
+    <p id="latin-tracked" class="tracked" lang="en">Hello world</p>
+
+    <!-- Must not be reported: digits and punctuation carry no writing system. -->
+    <p id="digits-tracked" class="tracked">2024 15%</p>
+
+    <!-- Must not be reported: below the rounding-noise floor. -->
+    <p id="arabic-noise" class="tracked-noise">مرحبا السلام كتاب</p>
+  </body>
+</html>

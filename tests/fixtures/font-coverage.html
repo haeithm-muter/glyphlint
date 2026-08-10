@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="utf-8" />
+    <title>Declared font stack that does not render</title>
+    <style>
+      /* A family that is never loaded and cannot be installed. The declaration looks correct in
+         the stylesheet and in getComputedStyle, and contributes nothing to what the reader sees:
+         the writing system is left to whatever the system substitutes.
+
+         Deliberately with no generic fallback. Measured: adding `sans-serif` makes the stack
+         resolve to a real font, and the probe then finds it measurably different from the
+         last-resort font and reports no suspicion — correctly, because the stack did resolve to
+         something. The rule can only ever see a stack that contributes nothing at all. */
+      .unloaded-thai {
+        font-family: 'GlyphlintFixtureFontThatIsNotInstalled';
+      }
+      /* A font that is present on the machines this suite runs on, so the measurement can tell
+         the two cases apart. */
+      .installed {
+        font-family: Arial, sans-serif;
+      }
+    </style>
+  </head>
+  <body>
+    <p id="thai-unloaded" class="unloaded-thai">สวัสดี ภาษาไทย ขอบคุณ</p>
+    <p id="devanagari-unloaded" class="unloaded-thai" lang="hi">नमस्ते हिन्दी भारत</p>
+
+    <!-- Must not be reported however the measurement comes out: Latin is excluded on purpose,
+         because a stack resolving to the platform default font is indistinguishable from a stack
+         that failed, and that is a Latin stack almost every time. See decision 005. -->
+    <p id="latin-unloaded" class="unloaded-thai" lang="en">Hello world</p>
+
+    <!-- Clean: a font that is actually present. -->
+    <p id="thai-installed" class="installed">สวัสดี ภาษาไทย ขอบคุณ</p>
+  </body>
+</html>

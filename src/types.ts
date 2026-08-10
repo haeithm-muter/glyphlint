@@ -88,12 +88,28 @@ export interface TextNodeCss {
   textTransform: string;
   direction: string;
   writingMode: string;
+  /**
+   * How an icon has been rotated or flipped. An RTL layout mirrors arrows with `scaleX(-1)` or a
+   * rotation, so this is the only evidence in the snapshot that a directional glyph was handled.
+   *
+   * Measured, not assumed: the computed value is a resolved matrix, never the function the
+   * author wrote. `scaleX(-1)` arrives as `matrix(-1, 0, 0, 1, 0, 0)`. A rule that searches this
+   * string for `scaleX` finds nothing on a page that mirrors every icon correctly.
+   */
+  transform: string;
   wordBreak: string;
   overflowWrap: string;
   hyphens: string;
   overflowX: string;
   overflowY: string;
+  /**
+   * The used height. For any element that generates a box this is a pixel length whether or not
+   * the author set one, so it cannot answer "did the author constrain this box?" — see decision
+   * 009. `auto` survives only on non-replaced inline elements, where it says as little.
+   */
   height: string;
+  /** `none`, or the number of lines a clamp allows. The other way a box cuts text off. */
+  webkitLineClamp: string;
   marginLeft: string;
   marginRight: string;
   paddingLeft: string;
@@ -159,7 +175,7 @@ export interface TextNodeSnapshot {
 /** Everything captured from one page, in one pass. */
 export interface DomSnapshot {
   /** Bumped whenever `TextNodeSnapshot` gains or changes a field. */
-  snapshotVersion: 1;
+  snapshotVersion: 2;
   url: string;
   finalUrl: string;
   capturedAt: string;
@@ -169,6 +185,71 @@ export interface DomSnapshot {
   /** Capped at 3000 entries. */
   nodes: TextNodeSnapshot[];
   truncated: boolean;
+}
+
+/**
+ * How badly a finding hurts the reader.
+ *
+ * The four names are axe-core's, deliberately. A report that puts our findings beside axe's has
+ * to grade them on the same scale, or the two halves cannot be read together.
+ */
+export type Severity = 'critical' | 'serious' | 'moderate' | 'minor';
+
+/**
+ * How much we trust the finding itself.
+ *
+ * This is the field that keeps the project honest. `high` means the condition is decidable from
+ * the snapshot and we are not guessing. `heuristic` means we are inferring from evidence that
+ * can be wrong, and the report must show it as such rather than burying it in a total.
+ */
+export type Confidence = 'high' | 'medium' | 'heuristic';
+
+/**
+ * One finding from our own rule layer.
+ *
+ * `source` is a literal rather than a free string so that a script-aware finding can never be
+ * mistaken for an axe-core one — the separation between the two is the claim the project makes.
+ *
+ * The three message fields are separate on purpose. A single blob of prose invites a rule author
+ * to describe the CSS and stop; forcing `whyItMatters` to be its own sentence forces every rule to
+ * say what the defect does *to the reader of that particular writing system*.
+ */
+export interface Violation {
+  ruleId: string;
+  title: string;
+  severity: Severity;
+  confidence: Confidence;
+  source: 'glyphlint';
+  script: ScriptId;
+  selector: string;
+  snippet: string;
+  whatIsWrong: string;
+  whyItMatters: string;
+  howToFix: string;
+  wcagRef?: string;
+}
+
+/**
+ * A script-aware rule.
+ *
+ * `check` is a pure function of the snapshot: no network, no browser, no clock, no shared state.
+ * The whole engine runs in milliseconds without launching anything, which is what makes a rule
+ * cheap enough to argue with. A rule that appears to need a browser value is a signal to extend
+ * `TextNodeSnapshot` and bump `DomSnapshot.snapshotVersion`, never to make the rule impure.
+ *
+ * `limitations` is rendered verbatim in the report. It is not documentation of the code, it is
+ * the sentence that tells a reader when not to believe this rule.
+ */
+export interface Rule {
+  id: string;
+  title: string;
+  severity: Severity;
+  confidence: Confidence;
+  affectedScripts: ScriptId[] | 'all';
+  description: string;
+  limitations: string;
+  wcagRef?: string;
+  check(snapshot: DomSnapshot): Violation[];
 }
 
 /**

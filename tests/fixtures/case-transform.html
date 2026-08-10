@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <title>Case transform applied to a script without case</title>
+    <style>
+      /* Latin-shaped CSS pointed at a translation. The property does nothing here, and that is
+         the point: it is the cheapest visible trace of a stylesheet nobody re-read. */
+      .shouty {
+        text-transform: uppercase;
+      }
+      .titled {
+        text-transform: capitalize;
+      }
+      /* Meaningful for CJK and not a case conversion. Must not be reported. */
+      .wide {
+        text-transform: full-width;
+      }
+    </style>
+  </head>
+  <body>
+    <h1 id="arabic-upper" class="shouty">مرحبا السلام كتاب</h1>
+    <p id="thai-capitalize" class="titled" lang="th">สวัสดี ภาษาไทย ขอบคุณ</p>
+    <p id="hangul-upper" class="shouty" lang="ko">안녕하세요 한국어</p>
+
+    <!-- Clean: no case transform at all. -->
+    <p id="arabic-clean">مرحبا السلام كتاب</p>
+
+    <!-- Must not be reported: Latin, Cyrillic and Greek all have case, so the declaration is
+         doing exactly what it was written to do. -->
+    <p id="latin-upper" class="shouty" lang="en">Hello world</p>
+    <p id="cyrillic-upper" class="shouty" lang="ru">Привет Здравствуйте</p>
+    <p id="greek-upper" class="shouty" lang="el">Ελληνικά Ευχαριστώ</p>
+
+    <!-- Must not be reported. Arabic still dominates this node, so the first gate lets it
+         through — but a fifth of the text is Latin, which is enough for the declaration to have
+         something to act on. This is the case the share threshold exists for. -->
+    <p id="mixed-upper" class="shouty">مرحبا السلام كتاب مرحبا السلام كتاب GlyphLint</p>
+
+    <!-- Must not be reported: full-width is not a case conversion. -->
+    <p id="han-fullwidth" class="wide" lang="zh">中文 你好 汉字</p>
+  </body>
+</html>

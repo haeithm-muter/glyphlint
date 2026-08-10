@@ -22,6 +22,103 @@ supersedes the old one, and the old one is marked `Superseded by`.
 
 ---
 
+## 010 — The flagship rule carries no WCAG reference, and that is the honest answer
+
+**Status:** Accepted
+**Date:** 2026-08-10
+
+**Context** — `cursive-script-letter-spacing` reports the defect this whole project was built
+around, and no WCAG success criterion covers it. The two that come nearest each fail for a
+different reason, and neither failure is a technicality.
+
+**SC 1.4.12 Text Spacing** is about spacing the *reader* imposes: content must stay usable when a
+user stylesheet sets letter spacing to 0.12em. Our rule reports spacing the *author* wrote into the
+page. The two are not merely a loose fit — for a cursive script they point in opposite directions,
+because the 0.12em the criterion asks content to survive is the same tracking that severs the joins
+between Arabic letters. A page can satisfy the criterion and be unreadable; a page can fail this
+rule and satisfy the criterion.
+
+**SC 1.4.8 Visual Presentation** is the author-side criterion for the typography of blocks of text,
+which makes it the right shape. Its five bullets name foreground and background colour, line length,
+justification, line spacing, and resize to 200%. Letter spacing is not among them.
+
+The rule specification proposed 1.4.8. Filling the field with it would have printed a criterion
+beside a finding it does not support, and the first reader who checked would have been right to
+distrust everything else in the report.
+
+**Decision** — `wcagRef` on this rule is left undefined. The explanation moves into the rule
+description, which states what SC 1.4.12 requires, what this rule targets instead, and why the
+tension between them is real rather than diplomatic. A rule with no criterion behind it says so.
+
+**Consequences** — The report will carry a critical finding with no criterion next to it, so the
+report layer must render an absent `wcagRef` as a normal state rather than as missing data. That is
+the correct shape: the value of this tool is that its findings can be trusted, and rounding an
+absent citation up to the nearest available number is the cheapest way to lose that. The rule
+applies to everything built after this — 1.4.12 and 1.4.8 both stay available where a rule
+genuinely breaches them, which is why `insufficient-line-height-for-script` cites 1.4.8 only when
+the measured leading falls below the 1.5 that criterion actually names.
+
+## 009 — The height condition in R11 is a specification error, and is removed
+
+**Status:** Accepted
+**Date:** 2026-08-10
+
+**Context** — The rule specification for `clipped-stacked-marks` asks for four conditions at once:
+the text carries stacked marks, **the element has a constrained height (`height` not `auto`, or
+`-webkit-line-clamp`)**, `overflow: hidden`, and `scrollHeight > clientHeight + 1`.
+
+The emphasised condition cannot be evaluated, and measurement is what settled it. `getComputedStyle`
+reports the *used* height, so any element that generates a box reports a pixel length whether or not
+the author wrote one: a plain paragraph in the fixtures reports `18px`. The value survives as `auto`
+only on non-replaced inline elements, where it says nothing about the author either. So the test
+"height is not `auto`" is true for essentially every block element on every page, and false for
+inline ones regardless of what their CSS says. It separates block from inline, which is not the
+question the rule is asking.
+
+**Decision** — Drop the height condition from R11. The rule fires on stacked marks plus
+`overflow: hidden` plus `scrollHeight > clientHeight + 1`, with `-webkit-line-clamp` kept as a
+separate signal that a box is cutting text off.
+
+Nothing is lost. A box that is hidden and scrolls past its own client height *is* constrained, by
+definition and by measurement, whatever CSS produced it — the condition was a second, weaker way of
+asking a question the overflow test already answers exactly.
+
+This is recorded as an error in the specification rather than in the code, because the code never
+had a chance to be right: the spec asked for a value the platform does not expose.
+
+**Consequences** — R11 gets simpler and slightly broader: it will now also catch a box constrained
+by a flex or grid parent rather than by its own `height`, which is a real way for this defect to
+happen and would have been missed. The risk moves entirely onto the overflow test, so if R11 turns
+out noisy, that is where to narrow it. See also decision 008 for the fields R9 and R11 need.
+
+## 008 — Snapshot version 2: two values the rule layer cannot do without
+
+**Status:** Accepted
+**Date:** 2026-08-10
+
+**Context** — Reading the eleven rule specifications against `TextNodeSnapshot` before building any
+of them turned up two rules asking for values the snapshot does not carry. R9
+(`unmirrored-directional-icon`) needs to know whether an icon was flipped, and R11
+(`clipped-stacked-marks`) needs to know whether a box clamps its lines. Neither can be derived from
+what was already captured, and both are browser values.
+
+**Decision** — Add `transform` and `webkitLineClamp` to `TextNodeCss` and bump `snapshotVersion` to
+2, now rather than when the rules that need them are written. The alternative — letting the rules
+reach for a browser at the point of need — is the one failure mode the architecture exists to
+prevent, and the fix is always to extend the snapshot.
+
+Both fields are captured with the values Chromium actually reports, which had to be measured rather
+than assumed:
+
+- `transform` computes to a resolved matrix. `scaleX(-1)` arrives as `matrix(-1, 0, 0, 1, 0, 0)`,
+  so R9 must match on the matrix and not on the function the author wrote.
+- `-webkit-line-clamp` is read through `getPropertyValue`, because the clamp is still a prefixed
+  property. It reports `none`, or the number of lines.
+
+**Consequences** — Any stored snapshot from version 1 is missing both fields, so a report cannot be
+regenerated from one against the current rules. That is what the version number is for. The cost of
+capturing two more computed values per node is negligible next to the page load that produced them.
+
 ## 007 — Sixteen writing systems, and an honest gap
 
 **Status:** Accepted

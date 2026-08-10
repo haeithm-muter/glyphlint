@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="utf-8" />
+    <title>Line height below what the writing system needs</title>
+    <style>
+      /* Narrow enough that every paragraph wraps onto several lines, which is the only situation
+         in which leading can collide with anything. */
+      p {
+        width: 200px;
+      }
+      /* The defect: leading chosen for Latin, applied to a script that stacks a vowel and then a
+         tone mark above the same base letter. */
+      .tight {
+        line-height: 1.1;
+      }
+      /* Short of our 1.6 estimate for Thai, but clear of the 1.5 that WCAG names. Reported
+         without a citation, because there is no standard behind 1.6. */
+      .between {
+        line-height: 1.55;
+      }
+      .comfortable {
+        line-height: 1.8;
+      }
+      /* A single-line element, where line-height is a vertical-centring device. Must not be
+         reported: one line cannot collide with the line above it. */
+      .nav-item {
+        line-height: 1.1;
+        width: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <p id="thai-tight" class="tight">
+      สวัสดี ภาษาไทย ขอบคุณ สวัสดี ภาษาไทย ขอบคุณ สวัสดี ภาษาไทย ขอบคุณ
+    </p>
+    <p id="devanagari-tight" class="tight" lang="hi">
+      नमस्ते हिन्दी भारत नमस्ते हिन्दी भारत नमस्ते हिन्दी भारत
+    </p>
+    <p id="thai-between" class="between">
+      สวัสดี ภาษาไทย ขอบคุณ สวัสดี ภาษาไทย ขอบคุณ สวัสดี ภาษาไทย ขอบคุณ
+    </p>
+
+    <!-- Clean: comfortably above the threshold for the script. -->
+    <p id="thai-comfortable" class="comfortable">
+      สวัสดี ภาษาไทย ขอบคุณ สวัสดี ภาษาไทย ขอบคุณ สวัสดี ภาษาไทย ขอบคุณ
+    </p>
+
+    <!-- Clean: line-height: normal is never reported. The browser derives it from the metrics of
+         the font itself, which for a well-made Thai font already allows for the marks. -->
+    <p id="thai-normal">สวัสดี ภาษาไทย ขอบคุณ สวัสดี ภาษาไทย ขอบคุณ สวัสดี ภาษาไทย ขอบคุณ</p>
+
+    <!-- Must not be reported: a single line of text in a tight box. -->
+    <p id="thai-single-line" class="nav-item">สวัสดี</p>
+
+    <!-- Must not be reported: a form control, where the browser default is already normal. -->
+    <button id="thai-button" class="tight">สวัสดี</button>
+  </body>
+</html>

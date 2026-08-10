@@ -209,12 +209,17 @@ function capturePage(limits: CaptureLimits): RawCapture {
             textTransform: style.textTransform,
             direction: style.direction,
             writingMode: style.writingMode,
+            transform: style.transform,
             wordBreak: style.wordBreak,
             overflowWrap: style.overflowWrap,
             hyphens: style.hyphens,
             overflowX: style.overflowX,
             overflowY: style.overflowY,
             height: style.height,
+            // Read through `getPropertyValue` rather than the camel-case property: the clamp is
+            // still a prefixed property, and the prefixed spelling is the one every browser agrees
+            // on. Chromium reports `none` when no clamp is set.
+            webkitLineClamp: style.getPropertyValue('-webkit-line-clamp'),
             marginLeft: style.marginLeft,
             marginRight: style.marginRight,
             paddingLeft: style.paddingLeft,
@@ -280,7 +285,7 @@ export async function captureSnapshot(
   const raw = await page.evaluate(capturePage, limits);
 
   return {
-    snapshotVersion: 1,
+    snapshotVersion: 2,
     url: requestedUrl,
     finalUrl: raw.finalUrl,
     capturedAt: new Date().toISOString(),
