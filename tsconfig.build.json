@@ -1,0 +1,12 @@
+{
+  // Build config: compiles src/ to dist/. Tests and tooling configs are excluded
+  // so they never end up in the published package.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "rootDir": "src",
+    "outDir": "dist",
+    "sourceMap": true
+  },
+  "include": ["src"]
+}

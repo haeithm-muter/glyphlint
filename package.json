@@ -1,0 +1,32 @@
+{
+  "name": "glyphlint",
+  "version": "0.1.0",
+  "description": "Accessibility scanner for defects caused by writing systems. Runs axe-core, then adds a script-aware rule layer on top.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "bin": {
+    "glyphlint": "dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "scan": "node dist/cli.js scan"
+  },
+  "dependencies": {
+    "@axe-core/playwright": "^4.12.1",
+    "playwright": "^1.62.1"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "typescript": "7.0.2",
+    "vitest": "^4.1.10"
+  }
+}

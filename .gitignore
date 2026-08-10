@@ -142,3 +142,12 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
 docs/briefs/
+
+# GlyphLint scan output
+screenshots/
+reports/
+test-results/
+playwright-report/
+
+# Per-machine tool state, not project content
+.claude/settings.local.json

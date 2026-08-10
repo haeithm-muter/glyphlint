@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Image without alternative text</title>
+  </head>
+  <body>
+    <main>
+      <h1>Image without alternative text</h1>
+      <!--
+        A one-pixel transparent GIF with no alt attribute. This is squarely axe-core's territory
+        (rule: image-alt) and squarely outside ours — the point of the fixture is to prove that
+        standard findings still come through untouched.
+      -->
+      <img
+        src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+        width="32"
+        height="32"
+      />
+      <p>The image above carries no alternative text.</p>
+    </main>
+  </body>
+</html>

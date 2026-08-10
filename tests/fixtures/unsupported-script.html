@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Writing systems GlyphLint does not model</title>
+  </head>
+  <body>
+    <main>
+      <h1>Writing systems GlyphLint does not model</h1>
+
+      <!-- Bengali: a whole paragraph. The dominant script of this node is `unknown`. -->
+      <p id="bengali-paragraph" lang="bn">বাংলা ভাষা একটি সুন্দর ভাষা</p>
+
+      <!-- Tamil: a second unsupported system, to prove the report is not Bengali-specific. -->
+      <p id="tamil-paragraph" lang="ta">தமிழ் மொழி</p>
+
+      <!--
+        The hard case: the dominant script here is Latin, so a check that only looked at
+        `dominantScript` would report this page as fully understood and say nothing about the
+        Bengali word sitting in the middle of it.
+      -->
+      <p id="mixed-latin-bengali">The Bengali word বাংলা appears inside this English sentence.</p>
+
+      <p id="supported-latin">This paragraph is plain English and is fully supported.</p>
+    </main>
+  </body>
+</html>

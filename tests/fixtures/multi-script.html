@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Several writing systems on one page</title>
+    <style>
+      /* The defect this project exists to find: letter-spacing on a cursive script severs the
+         joins between letters, so the word renders as a row of disconnected shapes. */
+      .spaced-arabic {
+        letter-spacing: 2px;
+      }
+      .tight-thai {
+        line-height: 1.1;
+      }
+      .fixed-height-vietnamese {
+        height: 20px;
+        overflow: hidden;
+      }
+      .hidden-by-display {
+        display: none;
+      }
+      .hidden-by-visibility {
+        visibility: hidden;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Several writing systems on one page</h1>
+
+      <p id="arabic-spaced" class="spaced-arabic" lang="ar" dir="rtl">مرحبا بالعالم</p>
+      <p id="thai-tight" class="tight-thai" lang="th">สวัสดีชาวโลก</p>
+      <p id="vietnamese-clipped" class="fixed-height-vietnamese" lang="vi">Tiếng Việt xin chào</p>
+      <p id="plain-latin">Plain English text for comparison.</p>
+
+      <p class="hidden-by-display">This text is display:none and must not be captured.</p>
+      <p class="hidden-by-visibility">This text is visibility:hidden and must not be captured.</p>
+
+      <div>
+        <bdi id="bidi-isolated" lang="he">שלום</bdi>
+      </div>
+
+      <script>
+        // Script contents are text nodes in the tree, but nobody reads them. They must not be
+        // captured, or every count on the page is polluted.
+        window.glyphlintFixtureMarker = 'this text must never appear in a snapshot';
+      </script>
+    </main>
+  </body>
+</html>

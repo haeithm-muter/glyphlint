@@ -1,0 +1,33 @@
+{
+  // Editor + `npm run typecheck` config: covers everything, emits nothing.
+  // The build config that actually emits `dist/` is tsconfig.build.json.
+  "compilerOptions": {
+    "target": "ES2022",
+    // DOM is required because the snapshot capture code runs inside the browser
+    // page (page.evaluate) and needs `document` / `getComputedStyle`.
+    // ES2023 is required because `Intl.Segmenter` typings only exist from ES2022.Intl up.
+    "lib": ["ES2023", "DOM"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    // Named explicitly so that `npm run typecheck` and `npm run build` resolve the same ambient
+    // types. Left implicit, the build config saw a different global scope than the check config
+    // and failed on code the check had just passed.
+    "types": ["node"],
+
+    "noEmit": true
+  },
+  "include": ["src", "tests", "vitest.config.ts"]
+}
