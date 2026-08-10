@@ -22,6 +22,44 @@ supersedes the old one, and the old one is marked `Superseded by`.
 
 ---
 
+## 017 — The rule layer ships unwired, and session 3 owns connecting it
+
+**Status:** Accepted
+**Date:** 2026-08-11
+
+**Context** — Session 2 delivered eleven rules and `runRules`, and nothing calls them. A scan of a
+page full of script-aware defects still returns `scriptAware: { violations: [] }`. The gap is
+invisible from the code: the scanner looks finished, the rule engine looks finished, and the single
+call between them was never asked for.
+
+Neither planning brief settles the ownership in a sentence. Session 2's task, its registry
+specification and its done-list are entirely about `src/rules/`, and mention neither `scanUrl` nor
+`scriptAware`. Session 3 describes what it inherits as eleven pure-function rules covered by tests
+on local fixtures, and then requires a CLI carrying `--disable`, `--scripts` and `--min-severity` —
+the three options of `runRules`, one for one — a report section for GlyphLint findings, and an exit
+code of 1 when violations are found. None of that works without the call.
+
+So the ownership is derivable. Derivable is not written down, and the briefs are not in the
+repository: the next person here should not have to reconstruct the boundary from two documents
+they cannot open.
+
+**Decision** — The boundary is fixed here rather than left to inference.
+
+- **Session 2 owns `src/rules/`.** Eleven rules, the registry, `runRules`, and their tests. Every
+  rule is a pure function of `DomSnapshot`. The only changes made outside `src/rules/` were the
+  snapshot fields the rules read, each recorded in its own decision.
+- **Session 3 owns the connection.** Calling `runRules` from `scanUrl`, narrowing
+  `ScanResult.scriptAware.violations` from `unknown[]` to `Violation[]`, and mapping the CLI
+  options onto `RunRulesOptions`.
+- **Until then, `scriptAware.violations` is empty by design, not by failure.** A scan reporting no
+  script-aware findings today is reporting a missing call, not a clean page.
+
+**Consequences** — `runRules` is deliberately called from nowhere in `src/`, so a search for it
+returns tests and this entry until session 3. The real risk this entry exists to prevent is the
+report layer being built before the wire: a report generated today would render an empty GlyphLint
+section beside a populated axe section, which is precisely the shape of result this project accuses
+other tools of producing. The wire comes first, and the first campaign must not run until it does.
+
 ## 016 — Isolation does not need an element, so R8 checks for it in the text
 
 **Status:** Accepted

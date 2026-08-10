@@ -353,7 +353,13 @@ export interface ScanResult {
   durationMs: number;
   /** axe-core, unmodified: violations verbatim, passes counted. */
   standard: { violations: unknown[]; passes: number };
-  /** Ours. Empty until the rule layer exists. */
+  /**
+   * Ours.
+   *
+   * The rule layer exists — eleven rules in `src/rules/` — and nothing calls it yet, so this is
+   * empty on every scan. That is a missing call, not a clean page. Session 3 owns connecting
+   * `runRules` here and narrowing this to `Violation[]`; see decision 017.
+   */
   scriptAware: { violations: unknown[] };
   scriptsDetected: Partial<Record<ScriptId, number>>;
   /**

@@ -42,7 +42,10 @@ describe('scanUrl against a clean page', () => {
     expect(result.durationMs).toBeGreaterThan(0);
   });
 
-  it('leaves the script-aware side empty, since no rules exist yet', async () => {
+  it('leaves the script-aware side empty, because nothing calls the rule layer yet', async () => {
+    // Eleven rules exist and the scanner does not run them: the wire is session 3's, per decision
+    // 017. This assertion is expected to change then, and until it does an empty script-aware
+    // side means a missing call rather than a clean page.
     const result = await scanUrl(server.fixture('clean.html'));
 
     expect(result.scriptAware.violations).toEqual([]);
@@ -199,8 +202,10 @@ describe('writing systems GlyphLint does not model', () => {
     expect(result.unsupportedScript).toBeDefined();
     expect(result.unsupportedScript?.nodeCount).toBeGreaterThan(0);
     expect(result.unsupportedScript?.samples.length).toBeGreaterThan(0);
-    // The page produced no script-aware findings, so without this field the result would be
-    // indistinguishable from a page we fully understood.
+    // The script-aware side is empty here for the same reason it is empty everywhere: nothing
+    // calls the rule layer yet (decision 017). What carries the weight is `unsupportedScript`
+    // above — without it, a page in a writing system we cannot analyse would be indistinguishable
+    // from a page we fully understood.
     expect(result.scriptAware.violations).toEqual([]);
   });
 
