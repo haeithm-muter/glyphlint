@@ -13,6 +13,7 @@
 
 import type { DomSnapshot, Rule, ScriptId, Severity, Violation } from '../types.js';
 import { caseTransformOnCaselessScript } from './case-transform-on-caseless-script.js';
+import { clippedStackedMarks } from './clipped-stacked-marks.js';
 import { cursiveScriptLetterSpacing } from './cursive-script-letter-spacing.js';
 import { insufficientLineHeightForScript } from './insufficient-line-height-for-script.js';
 import { langScriptMismatch } from './lang-script-mismatch.js';
@@ -21,8 +22,10 @@ import { missingScriptFontCoverage } from './missing-script-font-coverage.js';
 import { physicalCssInBidiContext } from './physical-css-in-bidi-context.js';
 import { unisolatedBidiRun } from './unisolated-bidi-run.js';
 import { unmirroredDirectionalIcon } from './unmirrored-directional-icon.js';
+import { unsafeWordBreakForScript } from './unsafe-word-break-for-script.js';
 
 export { caseTransformOnCaselessScript } from './case-transform-on-caseless-script.js';
+export { clippedStackedMarks } from './clipped-stacked-marks.js';
 export { cursiveScriptLetterSpacing } from './cursive-script-letter-spacing.js';
 export { insufficientLineHeightForScript } from './insufficient-line-height-for-script.js';
 export { langScriptMismatch } from './lang-script-mismatch.js';
@@ -31,12 +34,14 @@ export { missingScriptFontCoverage } from './missing-script-font-coverage.js';
 export { physicalCssInBidiContext } from './physical-css-in-bidi-context.js';
 export { unisolatedBidiRun } from './unisolated-bidi-run.js';
 export { unmirroredDirectionalIcon } from './unmirrored-directional-icon.js';
+export { unsafeWordBreakForScript } from './unsafe-word-break-for-script.js';
 
 /**
  * Every rule GlyphLint runs.
  *
- * Group A, script integrity, and group B, direction and layout. Group C is added to this array as
- * it is built, and nothing else needs to change when it is.
+ * Group A, script integrity. Group B, direction and layout. Group C, line breaking and clipping.
+ * The array is the only place a rule has to be registered; nothing else in the project enumerates
+ * them.
  */
 export const RULES: readonly Rule[] = [
   cursiveScriptLetterSpacing,
@@ -48,6 +53,8 @@ export const RULES: readonly Rule[] = [
   physicalCssInBidiContext,
   unisolatedBidiRun,
   unmirroredDirectionalIcon,
+  unsafeWordBreakForScript,
+  clippedStackedMarks,
 ];
 
 /** Worst first. The order a person reads a report in. */

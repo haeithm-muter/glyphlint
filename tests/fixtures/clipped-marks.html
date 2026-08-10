@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Stacked marks inside boxes that hide what does not fit</title>
+    <style>
+      .column {
+        width: 200px;
+      }
+
+      /* A card sized against Latin, truncating several lines. */
+      .clipped {
+        height: 40px;
+        overflow: hidden;
+      }
+      /* Shorter than a single line box: the closest thing to clipping the marks themselves. */
+      .shorter-than-a-line {
+        height: 12px;
+        overflow: hidden;
+      }
+      /* The other way a box cuts text off. */
+      .clamped {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+
+      /* Controls. */
+      .overflowing-but-visible {
+        height: 12px;
+      }
+      .scrollable {
+        height: 40px;
+        overflow-y: auto;
+      }
+      .roomy {
+        height: 200px;
+        overflow: hidden;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="column">
+      <h1>Clipping</h1>
+
+      <!-- Thai stacks a vowel and then a tone mark above the same base letter. -->
+      <p id="thai-clipped" class="clipped" lang="th">สวัสดี ภาษาไทย ขอบคุณ สวัสดี ภาษาไทย ขอบคุณ สวัสดี ภาษาไทย ขอบคุณ</p>
+      <p id="thai-shorter-than-line" class="shorter-than-a-line" lang="th">สวัสดี</p>
+      <p id="thai-clamped" class="clamped" lang="th">สวัสดี ภาษาไทย ขอบคุณ สวัสดี ภาษาไทย ขอบคุณ สวัสดี ภาษาไทย ขอบคุณ</p>
+
+      <!-- Devanagari hangs conjuncts below the headline. -->
+      <p id="devanagari-clipped" class="clipped" lang="hi">नमस्ते हिन्दी भारत नमस्ते हिन्दी भारत नमस्ते हिन्दी भारत</p>
+
+      <!-- Vietnamese: a tone mark above a letter that already carries one. Latin script, and the
+           profile flag is what makes this rule look at it — decision 003. -->
+      <p id="vietnamese-clipped" class="clipped" lang="vi">Tiếng Việt xin chào Tiếng Việt xin chào Tiếng Việt xin chào Tiếng Việt xin chào</p>
+
+      <!-- The content overflows and every pixel of it is still on the screen. -->
+      <p id="thai-visible" class="overflowing-but-visible" lang="th">สวัสดี</p>
+
+      <!-- The reader can scroll to the rest. -->
+      <p id="thai-scrollable" class="scrollable" lang="th">สวัสดี ภาษาไทย ขอบคุณ สวัสดี ภาษาไทย ขอบคุณ สวัสดี ภาษาไทย ขอบคุณ</p>
+
+      <!-- Room for everything. -->
+      <p id="thai-roomy" class="roomy" lang="th">สวัสดี ภาษาไทย ขอบคุณ</p>
+
+      <!-- Clipped just as hard, and carrying no stacked marks. Ordinary truncation is a design
+           decision and not something this rule reports. -->
+      <p id="latin-clipped" class="clipped">Hello world Bonjour Hello world Bonjour Hello world Bonjour Hello world</p>
+      <p id="han-clipped" class="clipped" lang="zh">中文 你好 汉字 中文 你好 汉字 中文 你好 汉字 中文 你好 汉字 中文 你好 汉字</p>
+    </main>
+  </body>
+</html>

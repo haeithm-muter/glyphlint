@@ -18,6 +18,8 @@ estimate, because a threshold with no stated source is the most dangerous thing 
 | Minimum right-to-left text before a missing `dir` is reported | 15 graphemes | **Estimate.** Below it the text is a brand name or a loanword, which the bidirectional algorithm places correctly on its own. |
 | Minimum text before a language/script mismatch is reported | 20 graphemes, 80% in one script | **Estimate.** A heading or a quoted phrase in another language is not a mismatch. |
 | Minimum embedded run before a bidi isolation finding | 2 graphemes | **Estimate.** A single character is an initial or a footnote marker. |
+| Minimum text before an unsafe line-break finding | 2 graphemes | **Estimate.** A break needs a word to break. |
+| Overflow tolerated before text counts as clipped | 1 px | **Estimate.** Sub-pixel layout reported as rounded integers can differ by a pixel on a box clipping nothing. |
 
 Three things this table is honest about:
 

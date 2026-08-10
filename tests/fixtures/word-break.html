@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Line-breaking declarations against the writing systems that meet them</title>
+    <style>
+      /* A narrow column is what makes an author reach for these in the first place. */
+      .column {
+        width: 120px;
+      }
+      .break-all {
+        word-break: break-all;
+      }
+      .hyphenate {
+        hyphens: auto;
+      }
+      .keep-all {
+        word-break: keep-all;
+      }
+      .wrap-word {
+        overflow-wrap: break-word;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="column">
+      <h1>Breaking</h1>
+
+      <!-- Cursive: break-all cuts between joined letters, the same damage letter-spacing does. -->
+      <p id="arabic-break-all" class="break-all" lang="ar" dir="rtl">مرحبا السلام كتاب مرحبا السلام كتاب</p>
+
+      <!-- Cursive: automatic hyphenation severs the word and adds a mark the script has no use for. -->
+      <p id="syriac-hyphens" class="hyphenate">ܫܠܡܐ ܟܬܒܐ ܣܘܪܝܝܐ ܫܠܡܐ ܟܬܒܐ</p>
+
+      <!-- Written without spaces and stacking marks: break-all splits a syllable. -->
+      <p id="thai-break-all" class="break-all" lang="th">สวัสดี ภาษาไทย ขอบคุณ สวัสดี ภาษาไทย ขอบคุณ</p>
+      <p id="khmer-break-all" class="break-all" lang="km">សួស្តី ភាសាខ្មែរ អរគុណ សួស្តី ភាសាខ្មែរ</p>
+
+      <!-- Written without spaces but not hyphenating: the meaningless pairing. -->
+      <p id="han-hyphens" class="hyphenate" lang="zh">中文 你好 汉字 中文 你好 汉字 中文 你好</p>
+
+      <!-- Han and Kana break between characters as a matter of course, so break-all is ordinary
+           here and must never be reported. This is the pairing the property table exists for. -->
+      <p id="han-break-all" class="break-all" lang="zh">中文 你好 汉字 中文 你好 汉字 中文 你好</p>
+
+      <!-- Thai does not hyphenate either, but hyphens is not the defect for this script. -->
+      <p id="thai-hyphens" class="hyphenate" lang="th">สวัสดี ภาษาไทย ขอบคุณ สวัสดี ภาษาไทย ขอบคุณ</p>
+
+      <!-- Latin is what both declarations were designed for. -->
+      <p id="latin-break-all" class="break-all">Hello world Bonjour Hello world Bonjour</p>
+      <p id="latin-hyphens" class="hyphenate">Hello world Bonjour Hello world Bonjour</p>
+
+      <!-- Neither declaration is break-all. -->
+      <p id="arabic-keep-all" class="keep-all" lang="ar" dir="rtl">مرحبا السلام كتاب مرحبا السلام</p>
+      <p id="arabic-wrap-word" class="wrap-word" lang="ar" dir="rtl">مرحبا السلام كتاب مرحبا السلام</p>
+
+      <!-- Untouched: the browser computes word-break: normal and hyphens: manual. -->
+      <p id="arabic-default" lang="ar" dir="rtl">مرحبا السلام كتاب مرحبا السلام كتاب</p>
+    </main>
+  </body>
+</html>

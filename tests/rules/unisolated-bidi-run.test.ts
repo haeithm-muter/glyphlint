@@ -73,6 +73,22 @@ describe('unisolated-bidi-run — must not flag', () => {
     expect(isolated).toHaveLength(1);
   });
 
+  it('never reports a run isolated by the Unicode characters this rule recommends', () => {
+    // `howToFix` names U+2068 and U+2069 as the answer where markup cannot be added. They isolate
+    // the run without creating an element, so the text node stays whole and the sandwiched pattern
+    // still appears in it — the structural argument the rule rests on does not hold here. Without
+    // this guard the rule reports text that took its own advice.
+    const FSI = String.fromCodePoint(0x2068);
+    const PDI = String.fromCodePoint(0x2069);
+    expect(rule.check(snapshotOfOne(`مرحبا السلام ${FSI}Acme Corp.${PDI} كتاب مرحبا`))).toEqual([]);
+  });
+
+  it('never reports a run wrapped in the embedding controls either', () => {
+    const RLE = String.fromCodePoint(0x202b);
+    const PDF = String.fromCodePoint(0x202c);
+    expect(rule.check(snapshotOfOne(`مرحبا السلام ${RLE}Acme Corp.${PDF} كتاب مرحبا`))).toEqual([]);
+  });
+
   it('never reports a writing system it does not model', () => {
     expect(rule.check(snapshotOfOne('বাংলা Acme Corp. বাংলা'))).toEqual([]);
   });

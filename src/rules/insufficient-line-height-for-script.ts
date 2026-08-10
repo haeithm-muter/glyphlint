@@ -71,11 +71,19 @@ export const insufficientLineHeightForScript: Rule = {
   ].join('\n\n'),
 
   limitations: [
-    'Ratio thresholds are partly estimates; see README. line-height: normal is never flagged.',
-    'A font whose own metrics are generous can be perfectly legible below these ratios, and a',
-    'font with tall ascenders can collide above them — the rule measures the CSS, not the',
-    'typeface. Single-line boxes are excluded, so a tight nav item or button is never reported.',
-  ].join(' '),
+    [
+      'Ratio thresholds are partly estimates; see README. line-height: normal is never flagged.',
+      'A font whose own metrics are generous can be perfectly legible below these ratios, and a',
+      'font with tall ascenders can collide above them — the rule measures the CSS, not the',
+      'typeface. Single-line boxes are excluded, so a tight nav item or button is never reported.',
+    ].join(' '),
+    [
+      'This rule is the half of mark clipping that measures the leading. A box shorter than the',
+      'text laid out inside it is the other half, and clipped-stacked-marks reports that one. A',
+      'tight line-height clips ink while the box and its content still measure the same, which is',
+      'why that rule cannot see this case and this one can.',
+    ].join(' '),
+  ].join('\n\n'),
 
   wcagRef: WCAG_REF,
 

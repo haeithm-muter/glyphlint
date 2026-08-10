@@ -22,6 +22,64 @@ supersedes the old one, and the old one is marked `Superseded by`.
 
 ---
 
+## 016 — Isolation does not need an element, so R8 checks for it in the text
+
+**Status:** Accepted
+**Date:** 2026-08-11
+
+**Context** — Decision 014 rebuilt `unisolated-bidi-run` on a structural argument: a wrapper that
+isolates an embedded run would have split the text into separate text nodes, so the sandwiched
+pattern surviving inside one node is itself the evidence that nothing isolated it.
+
+The argument has a hole. Isolation does not have to come from an element. U+2066 to U+2069 isolate
+a run in the character stream, and U+202A to U+202E embed or override it, all without producing any
+markup — the text node stays whole and the pattern still matches. And the rule recommends exactly
+those characters in its own `howToFix`, for the case where markup cannot be added. Left alone, it
+would report text that had taken its own advice.
+
+**Decision** — A node whose text contains any Unicode directional formatting character is skipped
+entirely, before the run walk. Skipping the whole node rather than the bracketed run is
+deliberately blunt: text carrying these characters has been thought about by somebody, and this is
+the rule where the cost of a wrong finding is highest.
+
+**Consequences** — A page that isolates one run with these characters and leaves a second run
+unisolated in the same text node is not reported. That is a real miss, and it is the direction this
+rule is allowed to err in. The `limitations` string says so. The alternative — tracking isolate
+depth across the run walk — is more machinery than a heuristic of this confidence has earned.
+
+## 015 — R11 measures layout, and says which half of the defect that leaves it
+
+**Status:** Accepted
+**Date:** 2026-08-11
+
+**Context** — `clipped-stacked-marks` detects clipping by comparing `scrollHeight` against
+`clientHeight`. Those are layout measurements. A tone mark rising above the line box is ink, and
+ink does not move either number.
+
+Measured in Chromium, the boundary sits in a useful place. With `line-height: normal` the browser
+allocates a taller line box for Thai than for Latin — 20px against 18px at the same font size — so
+the mark is inside the line box and any container too short for it produces `scrollHeight >
+clientHeight`. The rule catches a box shorter than one line, a fixed height truncating several
+lines, and `-webkit-line-clamp`, all of which were measured rather than assumed.
+
+What it cannot catch is a `line-height` set tight enough that the line box itself is shorter than
+the ink. There the box fits its content, both numbers agree, and the mark is clipped anyway.
+
+**Decision** — Keep the layout measurement, and state the boundary in the rule's own
+`limitations` rather than letting silence read as coverage. The uncovered case is exactly what
+`insufficient-line-height-for-script` reports, so both rules carry a sentence naming the other and
+the half it covers.
+
+An earlier plan claimed `-webkit-line-clamp` never produces an overflow and would slip past this
+condition. That was drawn from a fixture whose content did not overflow at all, and measurement
+showed the opposite: a clamped box reports 40px of client height against 60px of content.
+
+**Consequences** — Two rules share one defect along a documented seam, which is better than one
+rule with an undocumented blind spot. The cost is that a reader has to meet both findings to see
+the whole picture, and the report layer should keep that in mind when it groups results. The rule
+also reads only the overflow of the element holding the text; a clipping wrapper above it is
+invisible, and closing that would mean a fourth ancestor field in the snapshot.
+
 ## 014 — R8 reads the text node, not the `unicode-bidi` property
 
 **Status:** Accepted

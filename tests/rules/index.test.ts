@@ -39,8 +39,12 @@ describe('the registry', () => {
       'physical-css-in-bidi-context',
       'unisolated-bidi-run',
       'unmirrored-directional-icon',
+      // Group C — line breaking and clipping.
+      'unsafe-word-break-for-script',
+      'clipped-stacked-marks',
     ]);
     expect(new Set(ids).size).toBe(ids.length);
+    expect(RULES).toHaveLength(11);
   });
 
   it('gives every rule the things the report renders', () => {

@@ -308,6 +308,93 @@ describe('unmirrored-directional-icon on a real page', () => {
   });
 });
 
+describe('unsafe-word-break-for-script on a real page', () => {
+  it('reports each pairing the writing system cannot take', async () => {
+    const { violations } = await scan('word-break.html');
+
+    expect(flaggedBy(violations, 'unsafe-word-break-for-script').sort()).toEqual([
+      '#arabic-break-all',
+      '#han-hyphens',
+      '#khmer-break-all',
+      '#syriac-hyphens',
+      '#thai-break-all',
+    ]);
+  });
+
+  it('leaves break-all on Han alone, where it is ordinary rather than a defect', async () => {
+    const { snapshot, violations } = await scan('word-break.html');
+    const node = snapshot.nodes.find((entry) => entry.selector === '#han-break-all');
+
+    // The declaration really is there, and it is still not reported: Han breaks between characters
+    // as a matter of course. This is the pairing the property table exists to get right.
+    expect(node?.css.wordBreak).toBe('break-all');
+    expect(flaggedBy(violations, 'unsafe-word-break-for-script')).not.toContain('#han-break-all');
+  });
+
+  it('reads the computed keywords the browser really reports', async () => {
+    const { snapshot } = await scan('word-break.html');
+    const byId = new Map(snapshot.nodes.map((entry) => [entry.selector, entry]));
+
+    // No resolution, no normalisation: these arrive exactly as written, which is what makes the
+    // rule a keyword comparison rather than a guess.
+    expect(byId.get('#arabic-default')?.css.wordBreak).toBe('normal');
+    expect(byId.get('#arabic-default')?.css.hyphens).toBe('manual');
+    expect(byId.get('#arabic-keep-all')?.css.wordBreak).toBe('keep-all');
+    expect(byId.get('#syriac-hyphens')?.css.hyphens).toBe('auto');
+  });
+});
+
+describe('clipped-stacked-marks on a real page', () => {
+  it('reports the stacked-mark text its container is cutting off', async () => {
+    const { violations } = await scan('clipped-marks.html');
+
+    expect(flaggedBy(violations, 'clipped-stacked-marks').sort()).toEqual([
+      '#devanagari-clipped',
+      '#thai-clamped',
+      '#thai-clipped',
+      '#thai-shorter-than-line',
+      '#vietnamese-clipped',
+    ]);
+  });
+
+  it('catches a line clamp, which measures as an overflow after all', async () => {
+    const { snapshot } = await scan('clipped-marks.html');
+    const node = snapshot.nodes.find((entry) => entry.selector === '#thai-clamped');
+
+    // Worth asserting because the first measurement of this suggested the opposite: a clamped box
+    // whose content does not actually overflow reports equal heights, and it was the fixture that
+    // was wrong rather than the condition.
+    expect(node?.css.webkitLineClamp).toBe('2');
+    expect(node?.box.scrollHeight).toBeGreaterThan(node?.box.clientHeight ?? 0);
+  });
+
+  it('never reports text that overflows a box which does not hide it', async () => {
+    const { snapshot, violations } = await scan('clipped-marks.html');
+    const node = snapshot.nodes.find((entry) => entry.selector === '#thai-visible');
+
+    // The content is taller than the box and all of it is on the screen. Nothing was taken away.
+    expect(node?.box.scrollHeight).toBeGreaterThan(node?.box.clientHeight ?? 0);
+    expect(node?.css.overflowY).toBe('visible');
+    expect(flaggedBy(violations, 'clipped-stacked-marks')).not.toContain('#thai-visible');
+  });
+
+  it('never reports a scrollable box or a roomy one', async () => {
+    const { violations } = await scan('clipped-marks.html');
+    const flagged = flaggedBy(violations, 'clipped-stacked-marks');
+
+    expect(flagged).not.toContain('#thai-scrollable');
+    expect(flagged).not.toContain('#thai-roomy');
+  });
+
+  it('never reports scripts with no stacked marks, clipped just as hard', async () => {
+    const { violations } = await scan('clipped-marks.html');
+    const flagged = flaggedBy(violations, 'clipped-stacked-marks');
+
+    expect(flagged).not.toContain('#latin-clipped');
+    expect(flagged).not.toContain('#han-clipped');
+  });
+});
+
 describe('the snapshot the rules were given', () => {
   it('is at the version the rules were written against', async () => {
     const { snapshot } = await scan('cursive-letter-spacing.html');

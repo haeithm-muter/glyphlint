@@ -30,6 +30,20 @@ const BIDI_NEUTRALS = /[.,:;!?()"'\][{}]/u;
 /** Digits are directionally weak and travel with the run beside them, so they count as one. */
 const DIGITS = /[0-9]/u;
 
+/**
+ * The Unicode directional formatting characters.
+ *
+ * Isolation does not have to come from an element. U+2066 to U+2069 isolate a run in the text
+ * itself, and U+202A to U+202E embed or override it, all without creating any markup — so the text
+ * node stays whole and the sandwiched pattern still appears in it. Without this test the rule would
+ * report text that took the advice in its own `howToFix`, which recommends exactly these
+ * characters where markup cannot be added.
+ *
+ * Written as escapes rather than literals, as in `scripts/detect.ts`: these characters are
+ * invisible, and a reviewer cannot check a range they cannot see.
+ */
+const DIRECTIONAL_CONTROLS = /[\u202A-\u202E\u2066-\u2069]/u;
+
 /** Enough of a run to be content rather than an initial or a footnote marker. */
 const MINIMUM_RUN_GRAPHEMES = 2;
 
@@ -91,6 +105,11 @@ export const unisolatedBidiRun: Rule = {
       'its own, and it says nothing about right-to-left runs embedded in left-to-right text, which',
       'is the mirror image of the same problem.',
     ].join(' '),
+    [
+      'Text containing the Unicode directional formatting characters is skipped entirely, not',
+      'analysed run by run. Those characters isolate a run without any markup, so the evidence',
+      'this rule relies on is absent — and a node that uses them has been thought about.',
+    ].join(' '),
   ].join('\n\n'),
 
   check(snapshot: DomSnapshot): Violation[] {
@@ -103,6 +122,12 @@ export const unisolatedBidiRun: Rule = {
       // An author who reached for <bdi> has thought about bidirectional text. It does not isolate
       // the inner run, but it is enough evidence of intent to stay quiet about their markup.
       if (node.hasBdiAncestor) continue;
+
+      // Isolation without an element. The structural argument below — that a wrapper would have
+      // split the text node — does not hold for the Unicode isolate and embedding characters,
+      // which isolate a run inside the text and leave the node whole. This rule recommends them
+      // in its own `howToFix`, so reporting text that used them would be reporting our own advice.
+      if (DIRECTIONAL_CONTROLS.test(node.text)) continue;
 
       const runs = node.scriptRuns;
       let found: ScriptRun | null = null;
