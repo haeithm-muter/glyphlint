@@ -43,6 +43,10 @@ const DEFAULT_CSS: TextNodeCss = {
   overflowY: 'visible',
   height: '18px',
   webkitLineClamp: 'none',
+  // What Chromium reports when neither property is set. Measured, not assumed: `clip` computes to
+  // `auto` rather than to `none`, and a rule matching on the wrong word would never fire.
+  clip: 'auto',
+  clipPath: 'none',
   marginLeft: '0px',
   marginRight: '0px',
   paddingLeft: '0px',
@@ -109,7 +113,7 @@ export function textNode(text: string, overrides: NodeOverrides = {}): TextNodeS
 /** A snapshot wrapping the given nodes, with plausible page-level values around them. */
 export function snapshotOf(nodes: TextNodeSnapshot[]): DomSnapshot {
   return {
-    snapshotVersion: 3,
+    snapshotVersion: 4,
     url: 'http://127.0.0.1/test',
     finalUrl: 'http://127.0.0.1/test',
     capturedAt: '2026-08-10T00:00:00.000Z',

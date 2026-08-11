@@ -257,6 +257,10 @@ function capturePage(limits: CaptureLimits): RawCapture {
             // still a prefixed property, and the prefixed spelling is the one every browser agrees
             // on. Chromium reports `none` when no clamp is set.
             webkitLineClamp: style.getPropertyValue('-webkit-line-clamp'),
+            // The visually-hidden signature. `clip` is deprecated and still everywhere, so both
+            // spellings are captured; Chromium reports `auto` and `none` when neither is set.
+            clip: style.clip,
+            clipPath: style.clipPath,
             marginLeft: style.marginLeft,
             marginRight: style.marginRight,
             paddingLeft: style.paddingLeft,
@@ -327,7 +331,7 @@ export async function captureSnapshot(
   const raw = await page.evaluate(capturePage, limits);
 
   return {
-    snapshotVersion: 3,
+    snapshotVersion: 4,
     url: requestedUrl,
     finalUrl: raw.finalUrl,
     capturedAt: new Date().toISOString(),

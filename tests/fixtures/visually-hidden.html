@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <title>Visually hidden text, and text that really is clipped</title>
+    <style>
+      /*
+        The pattern found on a real homepage during manual verification, copied exactly: a skip
+        link hidden from sighted readers and left fully available to a screen reader. It measures
+        identically to clipped text — overflow hidden, content far taller than the box — and it is
+        correct accessibility work rather than a defect. See decision 025.
+      */
+      .screen-reader-text {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(1px, 1px, 1px, 1px);
+        clip-path: inset(100%);
+        white-space: nowrap;
+      }
+
+      /* The newer spelling on its own, without the deprecated `clip`. */
+      .visually-hidden-modern {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(100%);
+      }
+
+      /*
+        A real defect: a box too short for the text it holds. The width is set so the Thai wraps to
+        several lines and the overflow is unambiguous — a single line that happens to fit would
+        make this fixture prove nothing.
+      */
+      #thai-really-clipped {
+        width: 200px;
+        height: 20px;
+        overflow: hidden;
+        font-size: 16px;
+      }
+
+      /*
+        The near miss that keeps the exemption honest: clipped the same way, but big enough to be
+        showing somebody something. It must still be reported.
+      */
+      #arabic-clipped-but-visible {
+        width: 200px;
+        height: 20px;
+        overflow: hidden;
+        clip-path: inset(100%);
+        font-size: 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Visually hidden text, and text that really is clipped</h1>
+
+      <a class="screen-reader-text" href="#main-content" id="skip-link">تخطي الروابط</a>
+
+      <span class="visually-hidden-modern" id="modern-hidden">تخطي إلى المحتوى الرئيسي</span>
+
+      <p id="thai-really-clipped" lang="th">ข้อความภาษาไทยที่ถูกตัดโดยกล่องที่เตี้ยเกินไปจริง ๆ</p>
+
+      <p id="arabic-clipped-but-visible">مرحبا بالعالم من هذه الصفحة الطويلة جدا</p>
+
+      <p id="main-content">Ordinary content, so the page has something to skip to.</p>
+    </main>
+  </body>
+</html>

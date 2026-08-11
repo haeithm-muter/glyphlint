@@ -36,6 +36,47 @@ const NONSPACING_MARK = /\p{Mn}/u;
  */
 const OVERFLOW_TOLERANCE_PX = 1;
 
+/**
+ * The standard way to hide text from sighted readers while leaving it to a screen reader.
+ *
+ * A skip link, a heading that only assistive technology needs, a label for an icon button. The
+ * recipe has been the same for years: shrink the box to a pixel, clip it, and let the accessible
+ * name survive. Both spellings are matched because `clip` is deprecated and still everywhere,
+ * while `clip-path: inset(100%)` is what replaced it.
+ *
+ * Found by scanning a real homepage and checking the finding by hand: every clipping report on that
+ * page was this pattern, on markup that was doing exactly the right thing. See decision 025.
+ */
+const HIDDEN_CLIP = /^rect\(\s*1px[,\s]+1px[,\s]+1px[,\s]+1px\s*\)$/u;
+const HIDDEN_CLIP_PATH = /^inset\(\s*100%\s*\)$/u;
+
+/**
+ * How small a box has to be before it is a hiding technique rather than a container.
+ *
+ * The recipe uses one pixel. Two is allowed because a border or a sub-pixel rounding can add one,
+ * and because no real container of readable text is two pixels tall in either direction — a box
+ * this size is not showing anybody anything.
+ */
+const HIDDEN_BOX_PX = 2;
+
+/**
+ * Is this text hidden on purpose for sighted readers, rather than clipped by accident?
+ *
+ * Both halves are required. The clip alone could be a decorative crop of something visible, and a
+ * tiny box alone could be a genuinely broken container; together they are the visually-hidden
+ * idiom and nothing else.
+ */
+function isVisuallyHiddenForScreenReaders(node: {
+  css: { clip: string; clipPath: string };
+  box: { clientHeight: number; clientWidth: number };
+}): boolean {
+  const clipped =
+    HIDDEN_CLIP.test(node.css.clip.trim()) || HIDDEN_CLIP_PATH.test(node.css.clipPath.trim());
+  if (!clipped) return false;
+
+  return node.box.clientHeight <= HIDDEN_BOX_PX && node.box.clientWidth <= HIDDEN_BOX_PX;
+}
+
 export const clippedStackedMarks: Rule = {
   id: 'clipped-stacked-marks',
   title: 'Text with stacked marks cut off by its container',
@@ -80,6 +121,16 @@ export const clippedStackedMarks: Rule = {
       'It cannot see ink. A mark clipped by a tight line-height inside a box that fits the line is',
       'not reported here; insufficient-line-height-for-script is the rule that reports that shape.',
     ].join(' '),
+    [
+      'Text hidden on purpose for screen readers is skipped, and the test for that is narrow. A',
+      'skip link or an icon label hidden with clip: rect(1px, 1px, 1px, 1px) or',
+      'clip-path: inset(100%) in a box no more than two pixels across is correct markup, not a',
+      'defect, and this rule reported it as one until a real page was checked by hand. Other ways',
+      'of hiding text visually — a negative text indent, a zero-height box with no clip, a',
+      'transform that moves it off screen — still measure as clipping and are still reported, so a',
+      'finding on an element whose text is not meant to be seen is a false positive this rule can',
+      'still produce.',
+    ].join(' '),
   ].join('\n\n'),
 
   check(snapshot: DomSnapshot): Violation[] {
@@ -96,6 +147,12 @@ export const clippedStackedMarks: Rule = {
 
       const overflow = node.css.overflowY.trim().toLowerCase();
       if (!CLIPPING_OVERFLOW.has(overflow)) continue;
+
+      // Text hidden on purpose for assistive technology measures exactly like clipped text: the
+      // overflow is hidden and the content is far taller than the box. Nothing has been taken from
+      // anybody — the text is fully available to a screen reader, which is the whole point of the
+      // pattern. Reporting it would mean reporting correct accessibility work as a defect.
+      if (isVisuallyHiddenForScreenReaders(node)) continue;
 
       const { scrollHeight, clientHeight } = node.box;
       if (scrollHeight <= clientHeight + OVERFLOW_TOLERANCE_PX) continue;

@@ -22,6 +22,91 @@ supersedes the old one, and the old one is marked `Superseded by`.
 
 ---
 
+## 026 — The published number changed after a fix, and both numbers stay on the record
+
+**Status:** Accepted
+**Date:** 2026-08-11
+
+**Context** — The first campaign reported 81 findings from `clipped-stacked-marks`, and that figure
+was generated into the README before anyone had checked a single one of them by hand. Decision 025
+then established that sixteen of the 81 were text hidden on purpose for screen readers. The rule was
+fixed and the campaign re-run against the same ten targets.
+
+So there are two numbers for the same question, and the difference is a defect we found in
+ourselves. The tempting move is to replace the file, regenerate the block, and let the new number
+stand as though it had always been the number.
+
+**Decision** — The new results file replaces the old one, and the reason it changed is published
+rather than absorbed.
+
+- `results/campaign-<date>.json` holds the run made **after** the fix. Only measurements from the
+  current code are published, because a number produced by code that has since been corrected is
+  not a measurement of anything that exists.
+- The old file is not kept as a second results file. Two campaign documents in `results/` would be
+  read as two campaigns, and there was only one — run twice.
+- **The difference is named in the README**, with the old figure, the new figure, and what the fix
+  was. It is not a footnote and it is not left to the git history: a reader comparing this project
+  against an earlier version of its own README must find the change explained rather than have to
+  reconstruct it.
+- The manual verification section keeps its original verdict — the rule *was* wrong, on a page that
+  is named, and that is a fact about the tool that stays true after the fix.
+
+**Consequences** — Every future correction inherits this shape: fix, re-run, replace, and say what
+moved and why. The alternative is a project whose published numbers improve quietly, which is
+indistinguishable from a project that tunes its rules until the numbers look good — the one failure
+this project cannot recover from. The cost is a README that carries its own errata, which is the
+correct cost.
+
+## 025 — Text hidden on purpose is not text that was clipped
+
+**Status:** Accepted
+**Date:** 2026-08-11
+
+**Context** — Manual verification of the first campaign opened one reported element in a browser's
+developer tools and found this:
+
+```
+#bypass-block-links-label   "تخطي الروابط"   class="screen-reader-text"
+  1px × 1px · position: absolute · overflow: hidden
+  clip: rect(1px, 1px, 1px, 1px) · clip-path: inset(100%)
+```
+
+A skip link, hidden from sighted readers and fully available to a screen reader. It is the standard
+visually-hidden idiom, it is correct accessibility work, and `clipped-stacked-marks` reported it as
+an accessibility defect. Checking the rest of that page found sixteen such elements and not one
+genuine case, and across the whole campaign sixteen of the rule's 81 findings named a container one
+pixel tall.
+
+The rule could not have known. Its three conditions were all satisfied honestly: the text carries
+stacked marks, the overflow is hidden, and the content is far taller than the box. Hidden text and
+clipped text measure identically, because hiding text *is* clipping it — the difference is intent,
+and intent is exactly what a layout measurement cannot see.
+
+**Decision** — A node is skipped when it carries `clip: rect(1px, 1px, 1px, 1px)` or
+`clip-path: inset(100%)` **and** its client box is at most two pixels in both directions. Both
+halves are required: the clip alone could be a decorative crop of something visible, and a tiny box
+alone is a broken container rather than a technique.
+
+This needs two values the snapshot did not carry, so `TextNodeCss` gains `clip` and `clipPath` and
+`snapshotVersion` becomes 4 — the architecture's answer to a rule that needs more, applied for the
+fourth time rather than letting the rule reach for a browser.
+
+The two-pixel allowance is an estimate and is labelled one. One pixel is what the recipe uses; a
+border or sub-pixel rounding can add another, and nothing that shows a human being readable text is
+two pixels across.
+
+**Consequences** — The `limitations` string now names this class of finding, and names what is
+still missed: a negative text indent, a zero-height box with no clip, or a transform that moves text
+off screen all still measure as clipping and are still reported. The exemption is deliberately
+narrow, because the failure it prevents — reporting correct accessibility work as an accessibility
+defect — is worse than a missed finding, and because a broad "looks hidden" test would start
+excusing the boxes this rule exists to catch.
+
+`tests/fixtures/visually-hidden.html` copies the markup from the page where this was found, and
+`tests/scanner/rules-on-fixtures.test.ts` scans it in a real browser: the two hidden elements must
+stay unreported, and a clipped box that is actually showing something must still be reported. The
+number this changed is decision 026.
+
 ## 024 — The campaign runs on a person's machine; CI only publishes what it produced
 
 **Status:** Accepted

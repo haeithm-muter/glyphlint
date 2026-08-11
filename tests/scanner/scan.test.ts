@@ -35,7 +35,7 @@ describe('scanUrl against a clean page', () => {
   it('produces a snapshot at the declared version', async () => {
     const result = await scanUrl(server.fixture('clean.html'));
 
-    expect(result.snapshot?.snapshotVersion).toBe(3);
+    expect(result.snapshot?.snapshotVersion).toBe(4);
     expect(result.snapshot?.documentLang).toBe('en');
     expect(result.snapshot?.truncated).toBe(false);
     expect(result.snapshot?.nodes.length).toBeGreaterThan(0);

@@ -395,11 +395,55 @@ describe('clipped-stacked-marks on a real page', () => {
   });
 });
 
+describe('clipped-stacked-marks and text hidden on purpose', () => {
+  /**
+   * The regression this fixture exists for.
+   *
+   * A campaign scanned a real homepage, this rule reported sixteen findings on it, and every one of
+   * them was a skip link or an icon label hidden with the standard visually-hidden idiom. The
+   * verification was done by hand in a browser's developer tools; the fixture copies that markup
+   * exactly, so the false positive cannot come back without turning this test red. See decision
+   * 025.
+   */
+  it('never reports the visually-hidden idiom, in either spelling', async () => {
+    const { violations } = await scan('visually-hidden.html');
+    const flagged = flaggedBy(violations, 'clipped-stacked-marks');
+
+    expect(flagged).not.toContain('#skip-link');
+    expect(flagged).not.toContain('#modern-hidden');
+  });
+
+  it('captures the measurements that made the pattern indistinguishable', async () => {
+    const { snapshot } = await scan('visually-hidden.html');
+    const link = snapshot.nodes.find((entry) => entry.selector === '#skip-link');
+
+    // Chromium's own numbers, asserted so that a browser change cannot silently move the exemption
+    // out from under the rule: a one-pixel box holding a full line of text, overflow hidden.
+    expect(link?.css.clip).toBe('rect(1px, 1px, 1px, 1px)');
+    expect(link?.css.clipPath).toBe('inset(100%)');
+    expect(link?.css.overflowY).toBe('hidden');
+    expect(link?.box.clientHeight).toBe(1);
+    expect(link?.box.clientWidth).toBe(1);
+    expect(link?.box.scrollHeight).toBeGreaterThan(1);
+  });
+
+  it('still reports text a container really is cutting off', async () => {
+    const { violations } = await scan('visually-hidden.html');
+    const flagged = flaggedBy(violations, 'clipped-stacked-marks');
+
+    // Both halves of the exemption checked on a real page: the Thai paragraph is genuinely too
+    // short for its text, and the Arabic one carries the same clip-path in a box wide enough to be
+    // showing somebody something.
+    expect(flagged).toContain('#thai-really-clipped');
+    expect(flagged).toContain('#arabic-clipped-but-visible');
+  });
+});
+
 describe('the snapshot the rules were given', () => {
   it('is at the version the rules were written against', async () => {
     const { snapshot } = await scan('cursive-letter-spacing.html');
 
-    expect(snapshot.snapshotVersion).toBe(3);
+    expect(snapshot.snapshotVersion).toBe(4);
   });
 
   it('carries the computed values the hand-written test snapshots assume', async () => {

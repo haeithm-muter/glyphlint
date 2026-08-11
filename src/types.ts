@@ -126,6 +126,19 @@ export interface TextNodeCss {
   height: string;
   /** `none`, or the number of lines a clamp allows. The other way a box cuts text off. */
   webkitLineClamp: string;
+  /**
+   * The two properties that mark text as hidden on purpose rather than clipped by accident.
+   *
+   * `clip: rect(1px, 1px, 1px, 1px)` and `clip-path: inset(100%)` are the standard way to hide
+   * something from sighted readers while leaving it fully available to a screen reader — a skip
+   * link, a heading that only assistive technology needs. Both produce exactly the measurements a
+   * clipping rule looks for: overflow hidden, and content taller than a one-pixel box.
+   *
+   * Captured because the alternative was a rule that reports accessible markup as an accessibility
+   * defect. `clip` is deprecated in CSS and still the pattern in the wild, so both are read.
+   */
+  clip: string;
+  clipPath: string;
   marginLeft: string;
   marginRight: string;
   paddingLeft: string;
@@ -214,7 +227,7 @@ export interface TextNodeSnapshot {
 /** Everything captured from one page, in one pass. */
 export interface DomSnapshot {
   /** Bumped whenever `TextNodeSnapshot` gains or changes a field. */
-  snapshotVersion: 3;
+  snapshotVersion: 4;
   url: string;
   finalUrl: string;
   capturedAt: string;
