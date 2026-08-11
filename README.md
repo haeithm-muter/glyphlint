@@ -196,6 +196,39 @@ axe-core reported 588 elements across 17 of its own rules on the same pages, and
 
 <!-- METRICS:END -->
 
+### What was checked by hand, and what was not
+
+Unlike the block above, this section is written by hand. It records a manual verification carried
+out on 11 August 2026: six findings from the committed results were opened in a browser's developer
+tools on the live pages and checked one by one. **Five were correct. One was wrong.**
+
+| Finding | Site | Verdict |
+|---|---|---|
+| `cursive-script-letter-spacing` on `#text-blink` | jang.com.pk | **Correct.** `letter-spacing: 1px` on Urdu text set in Nafees at 18px, visible on the page. It is also the only element on that page carrying author letter spacing on Arabic-script text, which matches the single finding reported. |
+| `lang-script-mismatch` | express.pk | **Correct.** `<html lang="en">` with 176 elements of substantial Urdu text under it and no closer `lang`. A screen reader following that attribute reads Urdu with an English voice. |
+| `missing-dir-attribute` | express.pk | **Correct.** No `dir` attribute anywhere on the page; the right-to-left layout comes from CSS alone, which is exactly the weaker case the rule grades `moderate`. |
+| `case-transform-on-caseless-script` | aljazeera.net | **Correct.** `text-transform: uppercase` applied to Arabic headings and controls. Arabic has no case, so the declaration is a Latin assumption that survived translation. |
+| `physical-css-in-bidi-context` | aljazeera.net | **Correct.** Arabic text in a right-to-left context with `text-align: left`, and separately with `text-align: right`. Both are as reported. |
+| `clipped-stacked-marks` on `#bypass-block-links-label` | aljazeera.net | **Wrong — a false positive.** The element is a skip link deliberately hidden from sighted readers with the standard pattern: 1×1 pixel, `position: absolute`, `clip: rect(1px, 1px, 1px, 1px)`, `clip-path: inset(100%)`. Nothing is being taken away from anybody; the text is fully available to a screen reader. |
+
+**The false positive is not isolated, and the rule's own limitations do not cover it.** Of the 81
+`clipped-stacked-marks` findings in this campaign, 16 report a container one pixel tall — the
+signature of that visually-hidden pattern — and every one of the 16 is on the page examined above.
+The rule warns that it cannot tell deliberate truncation from accidental clipping; it does not warn
+that it counts text hidden on purpose for assistive technology. That gap is recorded here rather
+than quietly fixed, because this measurement was published before the rule was touched.
+
+**The scope of this check is narrower than it looks, and the reason is worth stating.** All six
+findings are in **one writing system, the Arabic script** — Arabic on aljazeera.net, Urdu on
+jang.com.pk and express.pk. This campaign ran the first 10 targets of the list, which are 6 Arabic
+and 4 Persian/Urdu sites, so no Thai, Hebrew, Devanagari or CJK page was scanned and **none was
+verified**. The maintainer reads Arabic and does not read Thai or Hindi, which is precisely the bias
+that would otherwise produce a confident claim about scripts nobody checked.
+
+**So: manual verification covers the Arabic script only.** Every rule that fires on Thai, Hebrew,
+Devanagari, Vietnamese or CJK text is, at this point, tested against local fixtures and unverified
+in the wild.
+
 ### Where the thresholds come from
 
 Every rule compares a page against numbers. All of them are listed here, sourced or labelled an
