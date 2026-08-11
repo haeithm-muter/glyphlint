@@ -49,8 +49,16 @@
       <p id="thai-shorter-than-line" class="shorter-than-a-line" lang="th">สวัสดี</p>
       <p id="thai-clamped" class="clamped" lang="th">สวัสดี ภาษาไทย ขอบคุณ สวัสดี ภาษาไทย ขอบคุณ สวัสดี ภาษาไทย ขอบคุณ</p>
 
-      <!-- Devanagari hangs conjuncts below the headline. -->
-      <p id="devanagari-clipped" class="clipped" lang="hi">नमस्ते हिन्दी भारत नमस्ते हिन्दी भारत नमस्ते हिन्दी भारत</p>
+      <!--
+        Devanagari hangs conjuncts below the headline.
+
+        The text is long on purpose. An earlier version of this case overflowed its 40px box by two
+        pixels, which is one pixel past the rule's tolerance — so whether it was reported depended
+        on which Devanagari font the host happened to have, and it passed on Windows and failed on a
+        Linux CI runner. A fixture that decides between pass and fail on a single pixel is measuring
+        the machine rather than the rule.
+      -->
+      <p id="devanagari-clipped" class="clipped" lang="hi">नमस्ते हिन्दी भारत नमस्ते हिन्दी भारत नमस्ते हिन्दी भारत नमस्ते हिन्दी भारत नमस्ते हिन्दी भारत नमस्ते हिन्दी भारत नमस्ते हिन्दी भारत नमस्ते हिन्दी भारत</p>
 
       <!-- Vietnamese: a tone mark above a letter that already carries one. Latin script, and the
            profile flag is what makes this rule look at it — decision 003. -->

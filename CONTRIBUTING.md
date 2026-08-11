@@ -36,6 +36,34 @@ finish in under a second and need no browser.
 
 Every documented command must run in PowerShell on Windows. No `&&` chains, no bash-only syntax.
 
+### The tests depend on the fonts your machine has
+
+This is worth knowing before you spend an hour on a failure that is not your fault.
+
+Roughly half the suite loads real pages in a real browser and measures how text is laid out. Text is
+laid out by a font, so a machine with no font for Arabic, Hebrew, Thai or Devanagari lays that text
+out differently — or draws it as empty boxes — and tests that measure clipping, line height or font
+coverage can fail for that reason alone.
+
+Two rules are affected in particular:
+
+- **`missing-script-font-coverage`** compares the declared font stack against a family that cannot
+  exist. On a system with no font for the script in question, both measure the same, so the rule
+  reports a page whose stack is fine. That is decision 005, and it is why the rule is `heuristic`.
+- **`clipped-stacked-marks`** compares content height against box height. Different fonts produce
+  different heights, and a fixture whose overflow is small can flip either way.
+
+Windows and macOS ship fonts for these scripts. A bare Linux container usually does not, and
+`npx playwright install --with-deps chromium` does not add them — its dependency set covers Latin,
+CJK and emoji. On Debian or Ubuntu:
+
+```bash
+sudo apt-get install -y --no-install-recommends fonts-noto-core fonts-noto-cjk
+```
+
+CI does exactly this, for exactly this reason. If a scanner test fails only for you, check
+`fc-list :lang=ar` before you change any code.
+
 ## Adding a writing system
 
 1. **Detection** — [`src/scripts/detect.ts`](src/scripts/detect.ts). Detection uses Unicode

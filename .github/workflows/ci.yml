@@ -36,6 +36,22 @@ jobs:
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
+      - name: Install fonts for the writing systems under test
+        # Playwright's own dependency set covers Latin, CJK and emoji, and nothing else this
+        # project is about: a bare runner has no font for Arabic, Hebrew, Thai or Devanagari.
+        # Chromium then draws that text with a last-resort fallback, which changes its metrics and
+        # makes the font probe report every multi-script page — including our own report — as
+        # having a font stack that is not rendering. That finding is correct on such a machine, and
+        # the fix is to give the machine the fonts rather than to quieten the rule: you cannot audit
+        # multi-script typography on a system that cannot draw the scripts.
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends fonts-noto-core fonts-noto-cjk
+          fc-cache -f
+          fc-list :lang=ar family | head -5
+          fc-list :lang=hi family | head -5
+          fc-list :lang=th family | head -5
+
       - name: Typecheck
         run: npm run typecheck
 
