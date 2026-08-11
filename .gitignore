@@ -149,5 +149,11 @@ reports/
 test-results/
 playwright-report/
 
+# The published campaign page is rendered from results/ on every deploy, so the rendered copy is
+# generated rather than authored. results/ itself is committed on purpose: it is the evidence
+# behind every number in the README.
+public/
+glyphlint-*.png
+
 # Per-machine tool state, not project content
 .claude/settings.local.json
