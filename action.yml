@@ -1,0 +1,103 @@
+# A composite action, deliberately.
+#
+# The alternative is a bundled Node action, which means committing a compiled `dist/` built by
+# `ncc`, keeping it in step with the source by hand, and reviewing a megabyte of generated
+# JavaScript in every pull request. A composite action is a few lines of shell that install the
+# published package and run it — there is nothing to keep in sync, and what runs in somebody else's
+# repository is exactly what they would get from npm.
+#
+# Requires the package to be published. Until `npm publish` has run for the first time, this action
+# cannot work, and that is stated here rather than discovered in a red build.
+name: GlyphLint
+description: >-
+  Scan a URL for accessibility defects caused by writing systems — cursive joining, stacked marks,
+  bidi layout — on top of axe-core, and fail the job above a severity threshold.
+author: haeithm-muter
+
+branding:
+  icon: type
+  color: blue
+
+inputs:
+  url:
+    description: The page to scan. One URL; this action does not crawl.
+    required: true
+  min-severity:
+    description: >-
+      Report only findings at least this severe: critical, serious, moderate or minor. Applies to
+      both layers, and reads axe-core's own impact value without re-scoring it.
+    required: false
+    default: serious
+  format:
+    description: 'Report format to write: terminal, json or html.'
+    required: false
+    default: html
+  output:
+    description: Where to write the report. Upload it as an artifact afterwards if you want to keep it.
+    required: false
+    default: glyphlint-report.html
+  fail-on-findings:
+    description: >-
+      Fail the job when findings exist at or above min-severity. Set to 'false' to report without
+      failing, which is the honest setting while you are still deciding what to fix.
+    required: false
+    default: 'true'
+  version:
+    description: Version of the glyphlint package to run. Pin it in production.
+    required: false
+    default: latest
+
+outputs:
+  exit-code:
+    description: '0 no findings, 1 findings found, 2 the page could not be scanned.'
+    value: ${{ steps.scan.outputs.exit-code }}
+
+runs:
+  using: composite
+  steps:
+    - name: Install Chromium for GlyphLint
+      shell: bash
+      run: npx --yes playwright install --with-deps chromium
+
+    - name: Scan
+      id: scan
+      shell: bash
+      env:
+        GLYPHLINT_URL: ${{ inputs.url }}
+        GLYPHLINT_MIN_SEVERITY: ${{ inputs.min-severity }}
+        GLYPHLINT_FORMAT: ${{ inputs.format }}
+        GLYPHLINT_OUTPUT: ${{ inputs.output }}
+        GLYPHLINT_VERSION: ${{ inputs.version }}
+      run: |
+        set +e
+        npx --yes "glyphlint@${GLYPHLINT_VERSION}" scan "${GLYPHLINT_URL}" \
+          --format "${GLYPHLINT_FORMAT}" \
+          --out "${GLYPHLINT_OUTPUT}" \
+          --min-severity "${GLYPHLINT_MIN_SEVERITY}" \
+          --no-screenshot
+        code=$?
+        set -e
+        echo "exit-code=${code}" >> "${GITHUB_OUTPUT}"
+        echo "GlyphLint exited ${code}. Report written to ${GLYPHLINT_OUTPUT}."
+
+    - name: Decide whether findings should fail the job
+      shell: bash
+      env:
+        CODE: ${{ steps.scan.outputs.exit-code }}
+        FAIL_ON_FINDINGS: ${{ inputs.fail-on-findings }}
+      run: |
+        # 2 always fails: a page that could not be scanned is not a page with no problems, and a
+        # green build for a scan that never happened is the worst outcome this action can produce.
+        if [ "${CODE}" = "2" ]; then
+          echo "::error::GlyphLint could not scan the page."
+          exit 1
+        fi
+        if [ "${CODE}" = "3" ]; then
+          echo "::error::GlyphLint was called with invalid arguments."
+          exit 1
+        fi
+        if [ "${CODE}" = "1" ] && [ "${FAIL_ON_FINDINGS}" = "true" ]; then
+          echo "::error::GlyphLint found accessibility violations at or above the threshold."
+          exit 1
+        fi
+        exit 0

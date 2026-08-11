@@ -3,7 +3,32 @@
   "version": "0.1.0",
   "description": "Accessibility scanner for defects caused by writing systems. Runs axe-core, then adds a script-aware rule layer on top.",
   "license": "MIT",
+  "author": "haeithm-muter",
   "type": "module",
+  "keywords": [
+    "accessibility",
+    "a11y",
+    "i18n",
+    "internationalization",
+    "rtl",
+    "bidi",
+    "unicode",
+    "arabic",
+    "hebrew",
+    "thai",
+    "devanagari",
+    "playwright",
+    "axe-core",
+    "cli"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/haeithm-muter/glyphlint.git"
+  },
+  "homepage": "https://github.com/haeithm-muter/glyphlint#readme",
+  "bugs": {
+    "url": "https://github.com/haeithm-muter/glyphlint/issues"
+  },
   "engines": {
     "node": ">=20"
   },
@@ -18,7 +43,9 @@
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run",
     "test:watch": "vitest",
-    "scan": "node dist/cli.js scan"
+    "scan": "node dist/cli.js scan",
+    "campaign": "node dist/cli.js campaign",
+    "metrics": "node dist/metrics.js"
   },
   "dependencies": {
     "@axe-core/playwright": "^4.12.1",
@@ -26,6 +53,7 @@
   },
   "devDependencies": {
     "@types/node": "^26.2.0",
+    "axe-core": "^4.12.1",
     "typescript": "7.0.2",
     "vitest": "^4.1.10"
   }

@@ -1,0 +1,66 @@
+# Publish the campaign report to GitHub Pages.
+#
+# This workflow renders a static page from results that are already committed. It does not scan
+# anything, and it never contacts a third-party website — the campaign runs locally, on a person's
+# machine, and the results file is reviewed and committed by hand. Decision 024 explains why.
+#
+# `workflow_dispatch` is here so the report can be republished without inventing a commit.
+name: Deploy report
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'results/**'
+      - 'src/report/**'
+      - '.github/workflows/deploy.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deployment at a time. A queued run is cancelled rather than racing the one in flight.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        # No browser install: rendering a report from a stored result is pure, which is the whole
+        # point of keeping `src/report/` free of Playwright.
+        run: npm run build
+
+      - name: Render the campaign report
+        run: node dist/campaign-report.js results public
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -22,6 +22,248 @@ supersedes the old one, and the old one is marked `Superseded by`.
 
 ---
 
+## 024 — The campaign runs on a person's machine; CI only publishes what it produced
+
+**Status:** Accepted
+**Date:** 2026-08-11
+
+**Context** — The obvious workflow is a scheduled job: a cron in GitHub Actions that scans the
+target list every week and republishes the report. It would keep the numbers fresh with no effort,
+and the infrastructure is free.
+
+It is also the one shape of automation this project must not build. Scanning thirty other people's
+servers on a schedule, from shared cloud infrastructure, with nobody watching, is not responsible
+scanning — it is a small crawler that nobody agreed to host. The delay, the robots.txt check and the
+honest User-Agent are all still there, and none of them changes the fact that the requests would be
+unattended, repeated, and coming from an address the site owner cannot associate with a person.
+"Rate-limited" is not the same as "invited".
+
+There is a second reason, and it is about the numbers rather than the ethics. A cron that rescans
+and republishes means a README figure can change without anyone reading the new result. The metrics
+protocol exists so that every published number was looked at by a human before it was published.
+
+**Decision** — The split is by what the work actually is.
+
+- **Scanning is manual.** `npm run campaign` is run by a person, on their own machine, on their own
+  connection. They read the output, decide the run was sound, and commit
+  `results/campaign-<date>.json`.
+- **Publishing is automated.** `deploy.yml` renders a static page from the committed results with
+  `dist/campaign-report.js` and pushes it to Pages. It installs no browser, contacts no third-party
+  host, and would work with the network disabled after `npm ci`. `workflow_dispatch` is included so
+  the page can be rebuilt without inventing a commit.
+- **CI never scans a third-party site.** `ci.yml` runs the test suite, which loads only fixtures
+  from a loopback server, and it re-runs `npm run metrics` to fail the build if the README has
+  drifted from the results file.
+- **There is no scheduled trigger anywhere in this repository.** Adding one is a decision that
+  supersedes this entry, not a configuration change.
+
+**Consequences** — The published numbers age, and the report says which date they are from. That is
+the correct trade: a stale number that a person vouched for is worth more than a fresh one that
+nobody read. The composite `action.yml` is the deliberate exception — it scans on a schedule if
+somebody sets it up, but against **their own** site, in **their own** repository, which is consent
+rather than assumption.
+
+## 023 — One host per target, and a homepage that really is one
+
+**Status:** Accepted
+**Date:** 2026-08-11
+
+**Context** — The first draft of the target list carried three entries under one host —
+`www.bbc.com/arabic`, `/persian` and `/urdu` — which is two problems wearing one coat.
+
+They are section pages, not homepages, so a README describing the campaign as thirty homepages
+would have been describing twenty-seven. And three of the thirty measurements would have come from
+one organisation's stylesheet, which is not three findings about how Arabic, Persian and Urdu are
+typeset on the web; it is one finding counted three times. A rule firing on all three would have
+read as "affects 10% of sites" when it affects one publisher.
+
+**Decision** — Every target is a distinct host, and every target URL is that host's homepage. The
+replacements stay inside the group they replaced, so the distribution the specification mandates —
+6 Arabic, 4 Persian/Urdu, 4 Hebrew, 4 Thai, 4 Devanagari, 4 Vietnamese, 4 CJK — is unchanged. The
+list now holds thirty targets on thirty hosts, all `https`, all at `/`, and the check that says so
+is a script over `parseTargetsFile` rather than a reading of the file by eye.
+
+**Consequences** — The campaign can honestly be described as thirty homepages on thirty hosts, and
+"percentage of sites affected" means percentage of publishers rather than percentage of URLs. The
+cost is that a site whose homepage is a language chooser rather than a page of text contributes
+little; `labelMismatches` is what surfaces that, and the answer is to change the target rather than
+to quietly keep a page that carries none of the writing system it was chosen for.
+
+## 022 — What a campaign records, and what it refuses to record
+
+**Status:** Accepted
+**Date:** 2026-08-11
+
+**Context** — A campaign produces the only numbers this project will ever publish, and the file it
+writes is committed. Three questions had to be settled before the first real run, because each of
+them is a way for a results file to be quietly misleading.
+
+**Decision** —
+
+- **Four outcomes, not two.** `scanned`, `disallowed`, `skipped`, `failed`. The split that matters
+  is between `disallowed` — the site published a robots.txt that refuses us — and `skipped`, where
+  robots.txt could not be read at all. A site that refused us said something; a site whose server
+  timed out said nothing, and treating silence as either consent or refusal would be a claim we
+  cannot support. RFC 9309 agrees: an unavailable robots.txt (`4xx`) means no rules exist, an
+  unreachable one (`5xx`, timeout, refused connection) means a complete disallow. So a host having
+  a bad day is left alone and counted, and never scanned on the assumption that it probably would
+  not have minded.
+- **Every percentage is out of the sites actually scanned, and the denominator is a field.**
+  `percentagesAreOutOf` sits in the aggregate beside the numbers it governs. Thirty targets that
+  produced twenty-four scans are twenty-four scans; a rule found on twelve of them affects 50% of
+  what we measured, not 40% of what we listed. The two readings differ by enough to matter, and a
+  README quoting the wrong one would be exactly the kind of number this project was built to avoid.
+- **Snapshots are dropped from the results file; findings are kept whole.** A snapshot is three
+  thousand nodes of computed CSS per page, and thirty of them make a file nobody opens and git
+  struggles with. Measured on a two-site run, findings alone cost about twelve kilobytes per site,
+  so a thirty-site campaign lands near a third of a megabyte — small enough to commit and read.
+  The cost is that a report cannot be regenerated from a campaign file with rules that have since
+  changed; rerunning the campaign is the answer, and it is the honest one anyway.
+
+**Consequences** — `labelMismatches` follows from the same instinct: a target listed under `thai`
+whose homepage carries no Thai at all is reported rather than counted, because a page that is not
+in the writing system it was chosen for cannot be evidence about that writing system. If a later
+stage needs the snapshots, the fix is a separate file per site, not a fatter results file.
+
+## 021 — The scanner identifies itself, and does not dress up as a browser
+
+**Status:** Accepted
+**Date:** 2026-08-11
+
+**Context** — The campaign specification requires a descriptive User-Agent. The tempting refinement
+was to append it to a real Chromium string, on the argument that the client genuinely is Chromium
+and that many sites serve reduced or hostile content to anything that does not look like a browser
+— which would have improved the measurements.
+
+The project owner rejected it, and the reasoning is worth keeping: a string built to get past bot
+detection is a disguise, whatever else is true about it. A tool whose entire argument is that
+scanning should be done openly does not get to improve its numbers by being harder to recognise.
+
+**Decision** — One string, sent to every server, for the robots.txt request and the page alike:
+
+```
+GlyphLint/0.1 (+https://github.com/haeithm-muter/glyphlint) accessibility research scanner
+```
+
+It is set on the browser context rather than on the request headers alone, so `navigator.userAgent`
+agrees with what the server was told — a scanner that identified itself in the header and denied it
+in JavaScript would be identifying itself only to whoever was not looking. The string is recorded
+in the results file, so anyone auditing their own logs can match what visited them to what we say
+we sent. A site that blocks it has answered, and the answer is recorded as a failure for that site
+rather than worked around.
+
+**Consequences** — Some sites will serve us a challenge page, a reduced page, or nothing at all,
+and the campaign will report fewer usable results than a disguised scanner would have collected.
+That is the cost, it is accepted, and the count of blocked sites is itself a finding worth
+publishing. A test asserts that the string contains no browser token, so the refinement cannot
+return by accident.
+
+## 020 — A screenshot is taken unless it is refused
+
+**Status:** Accepted
+**Date:** 2026-08-11
+
+**Context** — The CLI specification lists `--no-screenshot` and nothing else, which only makes
+sense if a screenshot is otherwise taken. Until now the tool did the opposite: it wrote one only
+when `--screenshot <path>` named a file, so the documented flag would have switched off something
+that never happened.
+
+**Decision** — A scan writes a full-page screenshot by default. `--no-screenshot` refuses it and
+`--screenshot <path>` names the file. The default path is derived rather than fixed:
+
+- with `--out report.html`, the screenshot is `report.png`, beside the report it belongs to;
+- without `--out`, it is `glyphlint-<host>.png` in the working directory, so scanning three sites
+  in a row leaves three files rather than one file overwritten twice.
+
+The path is printed on stderr every time, because a command that writes a file nobody asked about
+should at least say which file.
+
+**Consequences** — Any scan now touches the filesystem, including one whose report goes to stdout;
+that is the cost of the flag meaning what it says. The campaign runner must pass an explicit path
+per site rather than relying on the host-derived default, since two pages on one host would
+otherwise share a filename. Everything about the naming is in one function, `defaultScreenshotPath`
+in `cli.ts`, so that stays one edit.
+
+## 019 — The report is one file, with no JavaScript and no requests
+
+**Status:** Accepted
+**Date:** 2026-08-11
+
+**Context** — The report is the artefact a site owner actually receives. It has to open on a
+machine with no network, make no requests on its reader's behalf, and — since it is the output of
+an accessibility tool — survive being audited itself.
+
+**Decision** — One HTML file. Every style is inlined, there is no `url(` anywhere in it, and there
+is no script tag at all: the only interactive element is `<details>`, which the browser implements.
+Beyond that, four choices exist specifically because our own rules would otherwise report us:
+
+- **Leading is 1.7.** Above the 1.5 that WCAG SC 1.4.8 names and above the 1.6 we estimate for
+  Thai, Lao and Khmer. A report that quotes Thai must not be the thing cramping it.
+- **Quoted page text is `<bdi dir="auto"><samp>`.** `bdi` isolates the excerpt so an Arabic
+  sentence cannot drag our punctuation to the wrong end of the line; `dir="auto"` lets the browser
+  read the direction from the text, which is honest in a way a guess from us would not be — we know
+  the excerpt's script, and a script is not a direction. `samp` marks it as quoted sample rather
+  than prose, which is also what keeps `lang-script-mismatch` from reporting the report: labelling
+  an Arabic excerpt `lang="ar"` would be a guess, since Arabic script carries Persian and Urdu too.
+- **Code fonts for markup only.** The first version set a monospace stack on everything, and our
+  own scan of the report reported it: Thai in `Cascadia Mono, Consolas, Courier New, monospace` is
+  Thai in a stack that cannot render it. Excerpts now carry a stack that names families for the
+  writing systems this tool is about.
+- **Every declaration is logical.** No `margin-left`, no `text-align: left`. The self-audit renders
+  the document right-to-left and scans that too, so a physical property would be reported by
+  `physical-css-in-bidi-context` before it reached anyone.
+
+**Consequences** — There is no filtering, sorting or collapsing in the report beyond what `details`
+gives, and adding any would mean adding a script, which would mean this entry being superseded
+rather than quietly ignored. The gate that keeps all of the above true is
+`tests/scanner/report-self-audit.test.ts`, which generates a report from a fixture that gives both
+layers something to say, serves it, and scans it with the real scanner in both directions. It has
+already earned its place: it caught a keyboard-unreachable scroll region, from axe, and the
+monospace font defect above, from us.
+
+## 018 — The filters narrow both layers, and every withheld finding is counted
+
+**Status:** Accepted
+**Date:** 2026-08-11
+
+**Context** — The working agreement says axe-core's results are never modified, filtered, re-scored
+or re-worded. The CLI specification requires `--min-severity`, `--rules` and `--disable`. Asked
+which side of that line the options fall on, the project owner decided they narrow axe's output
+as well as ours.
+
+The tension is real and worth stating rather than smoothing over. What the agreement protects is
+that a reader can trust that axe's findings arrive as axe wrote them — not that every finding axe
+produced must appear in every view a caller asks for. A `--min-severity serious` that silently
+kept every moderate axe finding would be answering a different question from the one that was
+asked, and a report that dropped them without saying so would be the more serious failure of the
+two.
+
+**Decision** — The filters narrow what is displayed, and never what anything says.
+
+- **`--min-severity` reads axe's own `impact`.** The four names are axe's, which is the only reason
+  a comparison is possible at all; nothing here assigns a grade. A finding axe left ungraded
+  survives every floor, because dropping it would mean inventing a grade in order to decide it was
+  not serious enough to show.
+- **`--rules` and `--disable` match rule ids in both registries.** "Only this rule" means the same
+  thing on both sides of the report, so an allow-list naming only GlyphLint rules correctly
+  withholds all of axe's. Ids we do not recognise are passed over and named on stderr: axe owns its
+  registry, and keeping a copy of it here to validate against would be wrong within one release.
+- **`--scripts` narrows our layer only.** Not out of deference — an axe finding carries no writing
+  system for the filter to read. Applying it there would silence the entire standard section every
+  time it was used.
+- **Everything withheld is counted and printed.** `ScanResult.filters` records what was applied and
+  how many findings each layer lost, and all three renderers print it. The count is measured by
+  running the rules a second time unfiltered rather than inferred from the options, so a filter
+  that happens to withhold nothing reports zero.
+
+**Consequences** — A filtered report is a narrower view of a page, never a cleaner page, and the
+sentence that says so is not optional in any renderer. The reading of the working agreement that
+survives is the narrow one: **we do not change what axe said.** Every axe entry that appears is the
+object axe produced, passed through by reference and asserted as such in
+`tests/report/json.test.ts` — the label added for the JSON output goes onto a copy, so the result a
+caller holds is untouched. If a later stage needs the withheld findings themselves rather than
+their count, the fix is to carry them, not to stop counting.
+
 ## 017 — The rule layer ships unwired, and session 3 owns connecting it
 
 **Status:** Accepted

@@ -45,7 +45,7 @@ Which parts need the browser:
 
 | Needs Chromium | Does not |
 |---|---|
-| `npm run scan`, and `tests/scanner/` | `src/scripts/`, `src/rules/`, `src/report/`, and their tests |
+| `npm run scan`, `npm run campaign`, `tests/scanner/`, and `tests/campaign/runner.test.ts` | `src/scripts/`, `src/rules/`, `src/report/`, the pure half of `src/campaign/` (`robots`, `targets`, `aggregate`), and their tests |
 
 `npm test` runs both, so a working checkout needs the browser installed. The scanner tests take
 about a minute because each one drives a real page load; the pure tests finish in under a second.
@@ -68,6 +68,10 @@ npm run build
 npm run scan -- https://example.com
 ```
 
+```powershell
+npm run campaign -- --input sites/targets.json
+```
+
 Every documented command must run in PowerShell on Windows. No `&&` chains, no bash-only
 syntax, no `NUL`/`/dev/null` in documentation.
 
@@ -82,7 +86,8 @@ src/
   rules/        script-aware rules, one file each                       (pure)
   report/       HTML / JSON / terminal renderers                        (pure)
   campaign/     multi-site runner, robots.txt, aggregation              (impure)
-  cli.ts
+  cli-args.ts   argument parsing, one function over an array of strings (pure)
+  cli.ts        the impure shell: argv, files, exit codes
   types.ts
 tests/fixtures/   small local HTML files
 sites/targets.json
