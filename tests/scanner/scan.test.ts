@@ -42,13 +42,60 @@ describe('scanUrl against a clean page', () => {
     expect(result.durationMs).toBeGreaterThan(0);
   });
 
-  it('leaves the script-aware side empty, because nothing calls the rule layer yet', async () => {
-    // Eleven rules exist and the scanner does not run them: the wire is session 3's, per decision
-    // 017. This assertion is expected to change then, and until it does an empty script-aware
-    // side means a missing call rather than a clean page.
+  it('runs the rule layer and finds nothing on a page with nothing wrong', async () => {
+    // The other half of decision 017. This page is English, declared, and typographically plain,
+    // so an empty result here is a clean page — which it could not have been before the scanner
+    // called `runRules` at all. `rules-on-fixtures.test.ts` covers the pages that do have defects.
     const result = await scanUrl(server.fixture('clean.html'));
 
     expect(result.scriptAware.violations).toEqual([]);
+  });
+
+  it('reports no filters when none were asked for', async () => {
+    const result = await scanUrl(server.fixture('clean.html'));
+
+    // Absent, not present-and-empty: a reader of the result has to be able to tell an unfiltered
+    // run from a filtered one that happened to withhold nothing.
+    expect(result.filters).toBeUndefined();
+  });
+});
+
+describe('scanUrl with the findings narrowed', () => {
+  it('runs only the rules the caller allowed, and says what that withheld', async () => {
+    const result = await scanUrl(server.fixture('cursive-letter-spacing.html'), {
+      filters: { onlyRules: ['cursive-script-letter-spacing'] },
+    });
+
+    const ruleIds = new Set(result.scriptAware.violations.map((violation) => violation.ruleId));
+    expect([...ruleIds]).toEqual(['cursive-script-letter-spacing']);
+    expect(result.filters?.applied.onlyRules).toEqual(['cursive-script-letter-spacing']);
+    expect(result.filters?.withheld.scriptAware).toBeGreaterThan(0);
+  });
+
+  it('applies the same severity floor to axe-core, and counts what it hid', async () => {
+    const unfiltered = await scanUrl(server.fixture('cursive-letter-spacing.html'));
+    const filtered = await scanUrl(server.fixture('cursive-letter-spacing.html'), {
+      filters: { minSeverity: 'serious' },
+    });
+
+    // axe grades both of its findings on this page `moderate`, so the floor removes them and
+    // leaves our critical and serious findings standing. The severity read is axe's own `impact`
+    // — the comparison is possible precisely because we never re-scored anything.
+    expect(unfiltered.standard.violations.map((violation) => violation.id).sort()).toEqual([
+      'landmark-one-main',
+      'region',
+    ]);
+    expect(filtered.standard.violations).toEqual([]);
+    expect(filtered.filters?.withheld.standard).toBe(2);
+    expect(filtered.scriptAware.violations.length).toBeGreaterThan(0);
+  });
+
+  it('disables an axe rule by its own id', async () => {
+    const result = await scanUrl(server.fixture('missing-alt.html'), {
+      filters: { disabledRules: ['image-alt'] },
+    });
+
+    expect(result.standard.violations.map((violation) => violation.id)).not.toContain('image-alt');
   });
 });
 
@@ -57,16 +104,15 @@ describe('scanUrl against a page with a real axe violation', () => {
     const result = await scanUrl(server.fixture('missing-alt.html'));
 
     expect(result.error).toBeUndefined();
-    const ids = result.standard.violations.map((violation) => (violation as { id: string }).id);
+    const ids = result.standard.violations.map((violation) => violation.id);
     expect(ids).toContain('image-alt');
 
     // The finding keeps axe's own shape. Re-wording or re-scoring it would destroy the one
     // thing that makes the script-aware layer measurable against a known baseline.
-    const imageAlt = result.standard.violations.find(
-      (violation) => (violation as { id: string }).id === 'image-alt',
-    ) as { helpUrl: string; nodes: unknown[] };
-    expect(imageAlt.helpUrl).toContain('dequeuniversity.com');
-    expect(imageAlt.nodes.length).toBeGreaterThan(0);
+    const imageAlt = result.standard.violations.find((violation) => violation.id === 'image-alt');
+    expect(imageAlt?.helpUrl).toContain('dequeuniversity.com');
+    expect(imageAlt?.impact).toBe('critical');
+    expect(imageAlt?.nodes.length).toBeGreaterThan(0);
   });
 });
 
@@ -202,10 +248,10 @@ describe('writing systems GlyphLint does not model', () => {
     expect(result.unsupportedScript).toBeDefined();
     expect(result.unsupportedScript?.nodeCount).toBeGreaterThan(0);
     expect(result.unsupportedScript?.samples.length).toBeGreaterThan(0);
-    // The script-aware side is empty here for the same reason it is empty everywhere: nothing
-    // calls the rule layer yet (decision 017). What carries the weight is `unsupportedScript`
-    // above — without it, a page in a writing system we cannot analyse would be indistinguishable
-    // from a page we fully understood.
+    // Now that the rules do run, this is the assertion that matters: every rule stays silent on
+    // text it cannot attribute to a writing system it models, so the findings are empty and the
+    // page still has to be distinguishable from one we fully understood. `unsupportedScript` above
+    // is the only thing doing that work.
     expect(result.scriptAware.violations).toEqual([]);
   });
 

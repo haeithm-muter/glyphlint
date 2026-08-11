@@ -16,6 +16,15 @@ const FIXTURES_DIRECTORY = path.resolve(path.dirname(fileURLToPath(import.meta.u
 export interface FixtureServer {
   /** URL of a fixture file, e.g. `clean.html`. */
   fixture(name: string): string;
+  /**
+   * Serve a document that exists only in memory, and return its URL.
+   *
+   * For HTML this project generates rather than stores: the report renderer produces a string,
+   * and the only way to audit it with the real scanner is to put it behind a real origin. Writing
+   * it into `tests/fixtures/` instead would mean committing a generated file and keeping it in
+   * step with the renderer by hand.
+   */
+  serveHtml(name: string, html: string): string;
   /** A URL that accepts the connection and then never answers. For the timeout path. */
   hanging(): string;
   /** A URL that answers with JSON rather than a page. */
@@ -52,8 +61,18 @@ export async function findClosedPort(): Promise<number> {
 }
 
 export async function startFixtureServer(): Promise<FixtureServer> {
+  /** Documents registered at run time by `serveHtml`, keyed by the name they were given. */
+  const inMemory = new Map<string, string>();
+
   const server: Server = createServer((request, response) => {
     const requestPath = (request.url ?? '/').split('?')[0] ?? '/';
+
+    const generated = inMemory.get(path.basename(requestPath));
+    if (generated !== undefined) {
+      response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+      response.end(generated);
+      return;
+    }
 
     if (requestPath === '/hang') {
       // Deliberately no response and no end: the socket stays open until the scan gives up.
@@ -97,6 +116,10 @@ export async function startFixtureServer(): Promise<FixtureServer> {
 
   return {
     fixture: (name) => `${origin}/${name}`,
+    serveHtml: (name, html) => {
+      inMemory.set(name, html);
+      return `${origin}/${name}`;
+    },
     hanging: () => `${origin}/hang`,
     notHtml: () => `${origin}/not-html`,
     empty: () => `${origin}/empty`,

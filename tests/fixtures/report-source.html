@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>A page that gives both layers something to report</title>
+    <style>
+      /* Severs the joins in a cursive script: GlyphLint, critical. */
+      #arabic-tracked {
+        letter-spacing: 2px;
+      }
+      /* A box shorter than the ink Thai puts above the line: GlyphLint, moderate. */
+      #thai-clipped {
+        height: 20px;
+        overflow: hidden;
+        font-size: 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>A page that gives both layers something to report</h1>
+
+      <p id="arabic-tracked" lang="ar" dir="rtl">مرحبا بالعالم من هذه الصفحة</p>
+
+      <!--
+        A heading level skipped from h1 to h3: axe-core, moderate. It is here for its text rather
+        than for its level — axe quotes the failing element's markup, so this is what puts Arabic
+        characters inside an axe snippet, which is the path the report's own styling has to
+        survive. A code font that cannot render Arabic would show up in the self-audit.
+      -->
+      <h3 id="arabic-heading" lang="ar" dir="rtl">عنوان فرعي بالعربية</h3>
+
+      <p id="thai-clipped" lang="th">ข้อความภาษาไทยที่ถูกตัดโดยกล่องที่เตี้ยเกินไป</p>
+
+      <!-- No alt attribute: axe-core, critical. -->
+      <img
+        src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+        width="32"
+        height="32"
+      />
+
+      <!-- Hebrew with no direction declared anywhere above it: GlyphLint, serious. -->
+      <p>שלום עולם זהו טקסט עברי ללא הכרזת כיוון</p>
+    </main>
+  </body>
+</html>

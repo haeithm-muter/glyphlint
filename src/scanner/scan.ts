@@ -11,8 +11,10 @@
 import { AxeBuilder } from '@axe-core/playwright';
 import { chromium, type Browser } from 'playwright';
 
+import { runRules } from '../rules/index.js';
 import type {
   DomSnapshot,
+  FilterReport,
   ScanResult,
   ScanOptions,
   ScriptId,
@@ -20,6 +22,7 @@ import type {
 } from '../types.js';
 import { captureSnapshot } from './capture.js';
 import { classifyScanError, scanError } from './errors.js';
+import { filterAxeViolations, hasAnyFilter } from './filter.js';
 
 const DEFAULT_TIMEOUT_MS = 20_000;
 const DEFAULT_VIEWPORT = { width: 1280, height: 800 };
@@ -81,6 +84,7 @@ export async function scanUrl(url: string, options: ScanOptions = {}): Promise<S
     maxNodes: options.maxNodes ?? DEFAULT_MAX_NODES,
     maxTextLength: options.maxTextLength ?? DEFAULT_MAX_TEXT_LENGTH,
   };
+  const filters = options.filters ?? {};
 
   const startedAt = Date.now();
   const scannedAt = new Date().toISOString();
@@ -100,7 +104,12 @@ export async function scanUrl(url: string, options: ScanOptions = {}): Promise<S
 
   try {
     browser = await chromium.launch({ headless: true });
-    const context = await browser.newContext({ viewport });
+    // The User-Agent, when the caller set one, reaches the page request and `navigator.userAgent`
+    // together — a scanner that announced itself in the header and denied it in JavaScript would
+    // be identifying itself only to whoever was not looking.
+    const context = await browser.newContext(
+      options.userAgent === undefined ? { viewport } : { viewport, userAgent: options.userAgent },
+    );
     const page = await context.newPage();
     page.setDefaultTimeout(timeoutMs);
 
@@ -134,16 +143,37 @@ export async function scanUrl(url: string, options: ScanOptions = {}): Promise<S
       screenshotPath = options.screenshotPath;
     }
 
+    // The call decision 017 was written about. What runs below is the same pure rule engine
+    // `tests/rules/` exercises: the scanner hands it a snapshot and keeps no other channel open
+    // to it.
+    const scriptAware = runRules(snapshot, filters);
+    const standardViolations = filterAxeViolations(axeResults.violations, filters);
+
     const result: ScanResult = {
       url,
       finalUrl,
       scannedAt,
       durationMs: Date.now() - startedAt,
-      standard: { violations: axeResults.violations, passes: axeResults.passes.length },
-      scriptAware: { violations: [] },
+      standard: { violations: standardViolations, passes: axeResults.passes.length },
+      scriptAware: { violations: scriptAware },
       scriptsDetected: tallyScripts(snapshot),
       snapshot,
     };
+
+    if (hasAnyFilter(filters)) {
+      // Counted rather than inferred from the option: a filter that happens to withhold nothing
+      // must report zero, and the only way to know that is to ask what an unfiltered run would
+      // have produced. The second pass costs milliseconds and happens only when a filter is set —
+      // the engine is pure, so running it twice over one snapshot cannot disagree with itself.
+      const filterReport: FilterReport = {
+        applied: filters,
+        withheld: {
+          standard: axeResults.violations.length - standardViolations.length,
+          scriptAware: runRules(snapshot).length - scriptAware.length,
+        },
+      };
+      result.filters = filterReport;
+    }
 
     const unsupportedScript = findUnsupportedScript(snapshot);
     if (unsupportedScript !== undefined) result.unsupportedScript = unsupportedScript;

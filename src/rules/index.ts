@@ -11,7 +11,7 @@
  *    and a campaign that cannot diff its own output cannot show that anything improved.
  */
 
-import type { DomSnapshot, Rule, ScriptId, Severity, Violation } from '../types.js';
+import type { DomSnapshot, FilterOptions, Rule, ScriptId, Severity, Violation } from '../types.js';
 import { caseTransformOnCaselessScript } from './case-transform-on-caseless-script.js';
 import { clippedStackedMarks } from './clipped-stacked-marks.js';
 import { cursiveScriptLetterSpacing } from './cursive-script-letter-spacing.js';
@@ -65,14 +65,14 @@ const SEVERITY_RANK: Readonly<Record<Severity, number>> = {
   minor: 3,
 };
 
-export interface RunRulesOptions {
-  /** Rule ids to leave out of this run. */
-  disabledRules?: string[];
-  /** Keep only findings about these writing systems. */
-  onlyScripts?: ScriptId[];
-  /** Keep only findings at least this severe. */
-  minSeverity?: Severity;
-}
+/**
+ * The options are `FilterOptions` from the shared contract rather than a shape of their own.
+ *
+ * The same four fields narrow the standard layer in `scanner/filter.ts`. Declaring them twice
+ * would let the two halves of one CLI option drift apart, which is the sort of divergence a
+ * reader of a report has no way to see.
+ */
+export type { FilterOptions } from '../types.js';
 
 /**
  * Compare two strings by code unit.
@@ -95,10 +95,14 @@ function compareStrings(left: string, right: string): number {
  * the finding itself, so the order is a function of the data and not of the iteration order of
  * the registry.
  */
-export function runRules(snapshot: DomSnapshot, options: RunRulesOptions = {}): Violation[] {
-  const { disabledRules, onlyScripts, minSeverity } = options;
+export function runRules(snapshot: DomSnapshot, options: FilterOptions = {}): Violation[] {
+  const { onlyRules, disabledRules, onlyScripts, minSeverity } = options;
 
   const disabled = new Set(disabledRules ?? []);
+  // An allow-list naming only axe rule ids leaves this set empty of ours, and every rule here is
+  // correctly skipped. "Only these rules" has to mean the same thing in both layers or the option
+  // means one thing on the left of the report and another on the right.
+  const allowed = onlyRules === undefined ? null : new Set(onlyRules);
   const wanted = onlyScripts === undefined ? null : new Set<ScriptId>(onlyScripts);
   const severityFloor = minSeverity === undefined ? null : SEVERITY_RANK[minSeverity];
 
@@ -106,6 +110,7 @@ export function runRules(snapshot: DomSnapshot, options: RunRulesOptions = {}): 
 
   for (const rule of RULES) {
     if (disabled.has(rule.id)) continue;
+    if (allowed !== null && !allowed.has(rule.id)) continue;
 
     for (const violation of rule.check(snapshot)) {
       // Both filters read the finding, never the rule. A rule may affect several writing systems,

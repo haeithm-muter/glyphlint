@@ -7,6 +7,22 @@
  */
 
 /**
+ * axe-core's own result shapes, re-exported under our names.
+ *
+ * Type-only, and deliberately axe's rather than a description of axe written by us. The report
+ * renders these fields, so something has to name them; a hand-written copy would be a second,
+ * unowned model of another project's output, and it would drift the first time axe changed a
+ * field. `axe-core` is already installed as a dependency of `@axe-core/playwright`, so declaring
+ * it adds no runtime bytes — it is in `devDependencies` because nothing imports it at runtime.
+ */
+import type { NodeResult, Result } from 'axe-core';
+
+/** One rule axe-core reported a failure for, exactly as axe-core defines it. */
+export type AxeViolation = Result;
+/** One element axe-core reported under a rule, exactly as axe-core defines it. */
+export type AxeNodeResult = NodeResult;
+
+/**
  * A writing system GlyphLint can name.
  *
  * `common` and `unknown` are outcomes rather than writing systems: `common` means the text
@@ -306,6 +322,45 @@ export interface ScanError {
   detail?: string;
 }
 
+/**
+ * How a run was narrowed by the person who asked for it.
+ *
+ * Every field is a request from the caller, never a judgement of ours. An empty object is the
+ * default and means: report everything both layers found.
+ */
+export interface FilterOptions {
+  /** Report only these rule ids. Ids that name no GlyphLint rule are matched against axe's. */
+  onlyRules?: string[];
+  /** Report everything except these rule ids, matched against both layers the same way. */
+  disabledRules?: string[];
+  /**
+   * Report only findings about these writing systems.
+   *
+   * GlyphLint findings only, and not because we chose to protect axe from the filter: an axe
+   * finding carries no writing system to compare against, so the filter has nothing to read.
+   * Applying it there would silence the whole standard section every time it was used.
+   */
+  onlyScripts?: ScriptId[];
+  /** Report only findings at least this severe. Read from axe's own `impact`, never re-scored. */
+  minSeverity?: Severity;
+}
+
+/**
+ * What the filters did, so that nothing disappears silently.
+ *
+ * A report that shows six findings out of nine and says nothing about the other three is telling
+ * the reader something false about the page. Every renderer prints these counts whenever they are
+ * non-zero, which is what makes narrowing the output honest rather than lossy.
+ */
+export interface FilterReport {
+  applied: FilterOptions;
+  withheld: {
+    /** axe-core findings not shown. Their text is untouched; they are simply not displayed. */
+    standard: number;
+    scriptAware: number;
+  };
+}
+
 export interface ScanOptions {
   /** Hard limit on page load. Defaults to 20000. */
   timeoutMs?: number;
@@ -316,6 +371,16 @@ export interface ScanOptions {
   maxNodes?: number;
   /** Defaults to 500. */
   maxTextLength?: number;
+  /** How to narrow the findings. Defaults to reporting everything. */
+  filters?: FilterOptions;
+  /**
+   * What to tell the server we are.
+   *
+   * Left unset, the browser sends its own. The campaign runner sets it to GlyphLint's descriptive
+   * string so that a site owner reading their logs can tell what visited them and where to
+   * complain — and deliberately does not dress that string up as a browser.
+   */
+  userAgent?: string;
 }
 
 /**
@@ -351,16 +416,17 @@ export interface ScanResult {
   finalUrl: string;
   scannedAt: string;
   durationMs: number;
-  /** axe-core, unmodified: violations verbatim, passes counted. */
-  standard: { violations: unknown[]; passes: number };
   /**
-   * Ours.
+   * axe-core, unmodified: violations verbatim, passes counted.
    *
-   * The rule layer exists — eleven rules in `src/rules/` — and nothing calls it yet, so this is
-   * empty on every scan. That is a missing call, not a clean page. Session 3 owns connecting
-   * `runRules` here and narrowing this to `Violation[]`; see decision 017.
+   * `unmodified` is exact. Every entry is the object axe produced, with every field it carries —
+   * we do not re-score an impact, re-word a message or repair a selector. When a filter is set
+   * the caller may see fewer of these entries than axe produced, and `filters.withheld.standard`
+   * says how many are missing; see decision 018.
    */
-  scriptAware: { violations: unknown[] };
+  standard: { violations: AxeViolation[]; passes: number };
+  /** Ours: the findings of the eleven script-aware rules in `src/rules/`. */
+  scriptAware: { violations: Violation[] };
   scriptsDetected: Partial<Record<ScriptId, number>>;
   /**
    * The captured page. Absent when the scan failed.
@@ -375,6 +441,13 @@ export interface ScanResult {
    * Its presence is the signal: absent means nothing was skipped for that reason.
    */
   unsupportedScript?: UnsupportedScriptReport;
+  /**
+   * Present only when the run was narrowed. Absent means every finding is here.
+   *
+   * Optional rather than always-present-and-empty on purpose: a report has to be able to tell
+   * "nothing was filtered" from "filtered, and nothing happened to be withheld".
+   */
+  filters?: FilterReport;
   screenshotPath?: string;
   error?: ScanError;
 }
