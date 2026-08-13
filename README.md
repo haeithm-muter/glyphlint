@@ -1,3 +1,6 @@
+![CI](https://github.com/haeithm-muter/glyphlint/workflows/CI/badge.svg)
+![Deploy Report](https://github.com/haeithm-muter/glyphlint/workflows/Deploy%20report/badge.svg)
+
 # GlyphLint
 
 **Accessibility checks that only appear when your text isn't English.** GlyphLint is a command-line
